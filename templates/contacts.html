@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Contacts - Agile CRM{% endblock %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Contacts Management</h1>
+        <button id="addContactBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+            Add New Contact
+        </button>
+    </div>
+
+    <!-- Contacts Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Contact</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="contactsTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- Contacts will be populated here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Contact Modal -->
+<div id="contactModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4" id="modalTitle">Add New Contact</h3>
+            <form id="contactForm">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">First Name *</label>
+                            <input type="text" id="firstName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Last Name *</label>
+                            <input type="text" id="lastName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email *</label>
+                        <input type="email" id="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Title</label>
+                        <input type="text" id="title" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Account *</label>
+                        <select id="accountId" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select an account</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Training Received</label>
+                        <input type="text" id="trainingReceived" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Last Contact Date</label>
+                        <input type="date" id="lastContact" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Notes</label>
+                        <textarea id="notes" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentContactId = null;
+let accounts = [];
+
+// Load data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadAccounts().then(() => {
+        loadContacts();
+    });
+});
+
+// Modal controls
+document.getElementById('addContactBtn').addEventListener('click', function() {
+    openModal();
+});
+
+document.getElementById('cancelBtn').addEventListener('click', function() {
+    closeModal();
+});
+
+// Form submission
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveContact();
+});
+
+async function loadAccounts() {
+    try {
+        const response = await fetch('/api/accounts');
+        accounts = await response.json();
+        
+        const select = document.getElementById('accountId');
+        select.innerHTML = '<option value="">Select an account</option>';
+        
+        accounts.forEach(account => {
+            const option = document.createElement('option');
+            option.value = account.id;
+            option.textContent = account.companyName;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading accounts:', error);
+    }
+}
+
+function openModal(contact = null) {
+    currentContactId = contact ? contact.id : null;
+    const modal = document.getElementById('contactModal');
+    const title = document.getElementById('modalTitle');
+    
+    if (contact) {
+        title.textContent = 'Edit Contact';
+        // Populate form with contact data
+        document.getElementById('firstName').value = contact.firstName || '';
+        document.getElementById('lastName').value = contact.lastName || '';
+        document.getElementById('email').value = contact.email || '';
+        document.getElementById('title').value = contact.title || '';
+        document.getElementById('accountId').value = contact.accountId || '';
+        document.getElementById('trainingReceived').value = contact.trainingReceived || '';
+        document.getElementById('lastContact').value = contact.lastContact || '';
+        document.getElementById('notes').value = contact.notes || '';
+    } else {
+        title.textContent = 'Add New Contact';
+        // Clear form
+        document.getElementById('contactForm').reset();
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function closeModal() {
+    const modal = document.getElementById('contactModal');
+    modal.classList.add('hidden');
+    currentContactId = null;
+}
+
+async function loadContacts() {
+    try {
+        const response = await fetch('/api/contacts');
+        const contacts = await response.json();
+        
+        const tbody = document.getElementById('contactsTableBody');
+        tbody.innerHTML = '';
+        
+        contacts.forEach(contact => {
+            const row = createContactRow(contact);
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading contacts:', error);
+    }
+}
+
+function createContactRow(contact) {
+    const account = accounts.find(acc => acc.id === contact.accountId);
+    const accountName = account ? account.companyName : 'Unknown Account';
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${contact.firstName} ${contact.lastName}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contact.email}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contact.title || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${accountName}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contact.lastContact || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <button onclick="openModal(${JSON.stringify(contact).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900">Edit</button>
+        </td>
+    `;
+    return row;
+}
+
+async function saveContact() {
+    const formData = {
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        email: document.getElementById('email').value,
+        title: document.getElementById('title').value,
+        accountId: document.getElementById('accountId').value,
+        trainingReceived: document.getElementById('trainingReceived').value,
+        lastContact: document.getElementById('lastContact').value,
+        notes: document.getElementById('notes').value
+    };
+    
+    try {
+        const url = currentContactId ? `/api/contacts/${currentContactId}` : '/api/contacts';
+        const method = currentContactId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            closeModal();
+            loadContacts();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error saving contact:', error);
+        alert('Error saving contact');
+    }
+}
+</script>
+{% endblock %}

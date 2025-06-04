@@ -1,0 +1,6 @@
+name: els-crm
+services:
+  web:
+    project: .
+    language: python
+    host: appservice

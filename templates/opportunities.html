@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Opportunities - Agile CRM{% endblock %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Opportunities Management</h1>
+        <button id="addOpportunityBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+            Add New Opportunity
+        </button>
+    </div>
+
+    <!-- Opportunities Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opportunity Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales Stage</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Forecast</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Close Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="opportunitiesTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- Opportunities will be populated here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Opportunity Modal -->
+<div id="opportunityModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4" id="modalTitle">Add New Opportunity</h3>
+            <form id="opportunityForm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Opportunity Name *</label>
+                        <input type="text" id="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sales Stage</label>
+                        <select id="salesStage" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Prospecting">Prospecting</option>
+                            <option value="Qualification">Qualification</option>
+                            <option value="Needs Analysis">Needs Analysis</option>
+                            <option value="Proposal/Price Quote">Proposal/Price Quote</option>
+                            <option value="Negotiation/Review">Negotiation/Review</option>
+                            <option value="Closed Won">Closed Won</option>
+                            <option value="Closed Lost">Closed Lost</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Forecast</label>
+                        <select id="forecast" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="0%">0%</option>
+                            <option value="10%">10%</option>
+                            <option value="25%">25%</option>
+                            <option value="50%">50%</option>
+                            <option value="75%">75%</option>
+                            <option value="90%">90%</option>
+                            <option value="100%">100%</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Account *</label>
+                        <select id="companyId" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select an account</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Contact *</label>
+                        <select id="contactId" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select a contact</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Close Date</label>
+                        <input type="date" id="closeDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Contract Date</label>
+                        <input type="date" id="contractDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Next Steps</label>
+                        <textarea id="nextSteps" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Requirements</label>
+                        <textarea id="requirements" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentOpportunityId = null;
+let accounts = [];
+let contacts = [];
+
+// Load data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    Promise.all([loadAccounts(), loadContacts()]).then(() => {
+        loadOpportunities();
+    });
+});
+
+// Modal controls
+document.getElementById('addOpportunityBtn').addEventListener('click', function() {
+    openModal();
+});
+
+document.getElementById('cancelBtn').addEventListener('click', function() {
+    closeModal();
+});
+
+// Form submission
+document.getElementById('opportunityForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveOpportunity();
+});
+
+// Account selection change
+document.getElementById('companyId').addEventListener('change', function() {
+    updateContactOptions();
+});
+
+async function loadAccounts() {
+    try {
+        const response = await fetch('/api/accounts');
+        accounts = await response.json();
+        
+        const select = document.getElementById('companyId');
+        select.innerHTML = '<option value="">Select an account</option>';
+        
+        accounts.forEach(account => {
+            const option = document.createElement('option');
+            option.value = account.id;
+            option.textContent = account.companyName;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading accounts:', error);
+    }
+}
+
+async function loadContacts() {
+    try {
+        const response = await fetch('/api/contacts');
+        contacts = await response.json();
+    } catch (error) {
+        console.error('Error loading contacts:', error);
+    }
+}
+
+function updateContactOptions() {
+    const accountId = document.getElementById('companyId').value;
+    const contactSelect = document.getElementById('contactId');
+    
+    contactSelect.innerHTML = '<option value="">Select a contact</option>';
+    
+    if (accountId) {
+        const accountContacts = contacts.filter(contact => contact.accountId === accountId);
+        accountContacts.forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.id;
+            option.textContent = `${contact.firstName} ${contact.lastName}`;
+            contactSelect.appendChild(option);
+        });
+    }
+}
+
+function openModal(opportunity = null) {
+    currentOpportunityId = opportunity ? opportunity.id : null;
+    const modal = document.getElementById('opportunityModal');
+    const title = document.getElementById('modalTitle');
+    
+    if (opportunity) {
+        title.textContent = 'Edit Opportunity';
+        // Populate form with opportunity data
+        document.getElementById('name').value = opportunity.name || '';
+        document.getElementById('salesStage').value = opportunity.salesStage || 'Prospecting';
+        document.getElementById('forecast').value = opportunity.forecast || '0%';
+        document.getElementById('companyId').value = opportunity.companyId || '';
+        document.getElementById('closeDate').value = opportunity.closeDate || '';
+        document.getElementById('contractDate').value = opportunity.contractDate || '';
+        document.getElementById('nextSteps').value = opportunity.nextSteps || '';
+        document.getElementById('requirements').value = opportunity.requirements || '';
+        
+        // Update contacts and set contact
+        updateContactOptions();
+        setTimeout(() => {
+            document.getElementById('contactId').value = opportunity.contactId || '';
+        }, 100);
+    } else {
+        title.textContent = 'Add New Opportunity';
+        // Clear form
+        document.getElementById('opportunityForm').reset();
+        document.getElementById('salesStage').value = 'Prospecting';
+        document.getElementById('forecast').value = '0%';
+        updateContactOptions();
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function closeModal() {
+    const modal = document.getElementById('opportunityModal');
+    modal.classList.add('hidden');
+    currentOpportunityId = null;
+}
+
+async function loadOpportunities() {
+    try {
+        const response = await fetch('/api/opportunities');
+        const opportunities = await response.json();
+        
+        const tbody = document.getElementById('opportunitiesTableBody');
+        tbody.innerHTML = '';
+        
+        opportunities.forEach(opportunity => {
+            const row = createOpportunityRow(opportunity);
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading opportunities:', error);
+    }
+}
+
+function createOpportunityRow(opportunity) {
+    const account = accounts.find(acc => acc.id === opportunity.companyId);
+    const contact = contacts.find(cont => cont.id === opportunity.contactId);
+    
+    const accountName = account ? account.companyName : 'Unknown Account';
+    const contactName = contact ? `${contact.firstName} ${contact.lastName}` : 'Unknown Contact';
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${opportunity.name}</td>
+        <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSalesStageColor(opportunity.salesStage)}">
+                ${opportunity.salesStage}
+            </span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${opportunity.forecast}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${accountName}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contactName}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${opportunity.closeDate || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <button onclick="openModal(${JSON.stringify(opportunity).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900">Edit</button>
+        </td>
+    `;
+    return row;
+}
+
+function getSalesStageColor(stage) {
+    const colors = {
+        'Prospecting': 'bg-gray-100 text-gray-800',
+        'Qualification': 'bg-blue-100 text-blue-800',
+        'Needs Analysis': 'bg-yellow-100 text-yellow-800',
+        'Proposal/Price Quote': 'bg-orange-100 text-orange-800',
+        'Negotiation/Review': 'bg-purple-100 text-purple-800',
+        'Closed Won': 'bg-green-100 text-green-800',
+        'Closed Lost': 'bg-red-100 text-red-800'
+    };
+    return colors[stage] || 'bg-gray-100 text-gray-800';
+}
+
+async function saveOpportunity() {
+    const formData = {
+        name: document.getElementById('name').value,
+        salesStage: document.getElementById('salesStage').value,
+        forecast: document.getElementById('forecast').value,
+        companyId: document.getElementById('companyId').value,
+        contactId: document.getElementById('contactId').value,
+        closeDate: document.getElementById('closeDate').value,
+        contractDate: document.getElementById('contractDate').value,
+        nextSteps: document.getElementById('nextSteps').value,
+        requirements: document.getElementById('requirements').value
+    };
+    
+    try {
+        const url = currentOpportunityId ? `/api/opportunities/${currentOpportunityId}` : '/api/opportunities';
+        const method = currentOpportunityId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            closeModal();
+            loadOpportunities();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error saving opportunity:', error);
+        alert('Error saving opportunity');
+    }
+}
+</script>
+{% endblock %}
