@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, date
 import uuid
 
 from database import db
@@ -42,7 +42,7 @@ class Lead(db.Model):
     stage = db.Column(db.String(20), default='MAL')  # MAL, MQL, SAL, SQL
     notes = db.Column(db.Text)
     is_converted = db.Column(db.Boolean, default=False)
-    created_date = db.Column(db.Date, default=datetime.utcnow().date)
+    created_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -78,7 +78,7 @@ class Account(db.Model):
     description = db.Column(db.Text)
     notes = db.Column(db.Text)
     account_planning_fields = db.Column(db.Text)
-    create_date = db.Column(db.Date, default=datetime.utcnow().date)
+    create_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -116,7 +116,7 @@ class Contact(db.Model):
     account_id = db.Column(db.String(36), db.ForeignKey('accounts.id'), nullable=False)
     training_received = db.Column(db.String(200))
     last_contact = db.Column(db.Date)
-    create_date = db.Column(db.Date, default=datetime.utcnow().date)
+    create_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -152,7 +152,7 @@ class Opportunity(db.Model):
     close_date = db.Column(db.Date)
     contract_date = db.Column(db.Date)
     requirements = db.Column(db.Text)
-    created_date = db.Column(db.Date, default=datetime.utcnow().date)
+    created_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
