@@ -1,5 +1,5 @@
 #!/bin/sh
-'''exec' "/Users/marclefebvre/Projects/ELS CRM/venv/bin/python" "$0" "$@"
+'''exec' "/Users/marclefebvre/Projects/ELS CRM/venv/bin/python3.13" "$0" "$@"
 ' '''
 # -*- coding: utf-8 -*-
 import re
