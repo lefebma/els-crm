@@ -97,7 +97,10 @@ def register():
             return redirect(url_for('main.dashboard'))
         except Exception as e:
             db.session.rollback()
-            message = 'Registration failed. Please try again.'
+            print(f"Registration error: {e}")
+            import traceback
+            traceback.print_exc()
+            message = f'Registration failed: {str(e)}'
             if request.content_type == 'application/json':
                 return jsonify({'success': False, 'message': message}), 500
             flash(message, 'error')
