@@ -258,3 +258,40 @@ def db_test():
         <hr>
         <p><a href="/">Return to Home</a></p>
         """
+
+@main_bp.route('/leads/<lead_id>/convert', methods=['GET'])
+@login_required
+def convert_lead(lead_id):
+    """Convert a lead via the UI (GET request)"""
+    lead = Lead.query.filter_by(id=lead_id, created_by=current_user.id).first()
+    if not lead:
+        flash("Lead not found.", "error")
+        return redirect(url_for("main.leads"))
+    if lead.is_converted:
+        flash("Lead already converted.", "info")
+        return redirect(url_for("main.leads"))
+    try:
+        # Call a helper (or inline conversion logic) to convert the lead.
+        # (For example, create an account, contact, and opportunity.)
+        # (Here we assume a helper _convert_lead(lead) exists or inline conversion is performed.)
+        # (If you have a helper, uncomment the next line.)
+        # _convert_lead(lead)
+        # (Inline conversion example (simplified) – adjust as needed):
+        account = Account(company_name=lead.company_name, description=f"Converted from lead: {lead.company_name}", created_by=current_user.id)
+        db.session.add(account)
+        db.session.flush()
+        name_parts = lead.contact_person.split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        contact = Contact(first_name=first_name, last_name=last_name, email=lead.email, account_id=account.id, created_by=current_user.id)
+        db.session.add(contact)
+        db.session.flush()
+        opportunity = Opportunity(name=f"Opportunity for {lead.company_name}", sales_stage="Prospecting", forecast="0%", company_id=account.id, contact_id=contact.id, next_steps="Initial outreach", requirements=f"Converted from lead: {lead.notes or 'No notes.'}", created_by=current_user.id)
+        db.session.add(opportunity)
+        lead.is_converted = True
+        db.session.commit()
+        flash("Lead converted successfully.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error converting lead: {str(e)}", "error")
+    return redirect(url_for("main.leads"))
