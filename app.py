@@ -15,6 +15,19 @@ def create_app():
     
     # Handle PostgreSQL URL configuration for Azure
     if database_url.startswith('postgresql://'):
+        # For Azure PostgreSQL, we need to inject the password from Key Vault
+        postgres_password = os.getenv('POSTGRES_PASSWORD')
+        if postgres_password:
+            # Parse the URL to inject the password
+            # Format: postgresql://username@host:port/database?params
+            # Target: postgresql://username:password@host:port/database?params
+            if '@' in database_url and ':' not in database_url.split('@')[0].split('//')[-1]:
+                # Split at @ and inject password before @
+                parts = database_url.split('@')
+                username_part = parts[0]  # postgresql://username
+                host_part = '@'.join(parts[1:])  # host:port/database?params
+                database_url = f"{username_part}:{postgres_password}@{host_part}"
+        
         # Azure PostgreSQL requires SSL
         if '?sslmode=' not in database_url:
             database_url += '?sslmode=require'
@@ -30,6 +43,9 @@ def create_app():
     }
 
     print(f"Database URL: {database_url[:50]}..." if len(database_url) > 50 else f"Database URL: {database_url}")
+    print(f"POSTGRES_PASSWORD environment variable: {'Present' if os.getenv('POSTGRES_PASSWORD') else 'Missing'}")
+    if database_url.startswith('postgresql://'):
+        print(f"PostgreSQL URL detected - Password injection: {'Applied' if postgres_password else 'Skipped'}")
 
     # Initialize extensions
     from database import db, login_manager
