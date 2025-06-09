@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash, make_response
 from flask_login import login_required, current_user
 from models import Lead, Account, Contact, Opportunity, User
 from database import db
+import csv
+from io import StringIO
 
 main_bp = Blueprint('main', __name__)
 
@@ -67,13 +69,11 @@ def add_account():
     """Add new account"""
     if request.method == 'POST':
         try:
+            # Map form fields to model fields
             account = Account(
-                name=request.form['name'],
-                industry=request.form.get('industry'),
-                website=request.form.get('website'),
-                phone=request.form.get('phone'),
-                email=request.form.get('email'),
-                address=request.form.get('address'),
+                company_name=request.form['name'],  # Map name to company_name
+                description=request.form.get('industry'),  # Map industry to description
+                address_line1=request.form.get('address'),
                 created_by=current_user.id
             )
             db.session.add(account)
@@ -99,20 +99,38 @@ def add_contact():
     """Add new contact"""
     if request.method == 'POST':
         try:
+            # Get or create a default account for this user
+            account = Account.query.filter_by(created_by=current_user.id).first()
+            print(f"DEBUG: Found account: {account}")
+            if not account:
+                # Create a default account
+                account = Account(
+                    company_name="Default Company",
+                    created_by=current_user.id
+                )
+                db.session.add(account)
+                db.session.commit()  # Commit to get the ID
+                print(f"DEBUG: Created new account: {account.id}")
+            else:
+                print(f"DEBUG: Using existing account: {account.id}")
+            
+            # Create the contact
+            print(f"DEBUG: About to create contact with account_id: {account.id}")
             contact = Contact(
                 first_name=request.form['first_name'],
                 last_name=request.form['last_name'],
                 email=request.form['email'],
-                phone=request.form.get('phone'),
-                job_title=request.form.get('job_title'),
-                account_id=request.form.get('account_id') if request.form.get('account_id') else None,
+                title=request.form.get('job_title'),  # Map job_title to title
+                account_id=account.id,  # Use the account's ID directly
                 created_by=current_user.id
             )
+            print(f"DEBUG: Contact object created with account_id: {contact.account_id}")
             db.session.add(contact)
             db.session.commit()
             flash('Contact added successfully!', 'success')
             return redirect(url_for('main.contacts'))
         except Exception as e:
+            print(f"DEBUG: Exception occurred: {str(e)}")
             flash(f'Error adding contact: {str(e)}', 'error')
             db.session.rollback()
     
@@ -123,7 +141,9 @@ def add_contact():
 @login_required
 def opportunities():
     """Opportunities management page"""
-    opportunities = Opportunity.query.filter_by(created_by=current_user.id).all()
+    opportunities = Opportunity.query.filter_by(created_by=current_user.id).options(
+        db.joinedload(Opportunity.account)
+    ).all()
     return render_template('opportunities.html', opportunities=opportunities)
 
 @main_bp.route('/opportunities/add', methods=['GET', 'POST'])
@@ -132,14 +152,37 @@ def add_opportunity():
     """Add new opportunity"""
     if request.method == 'POST':
         try:
+            # Get or create a default account for this user
+            account = Account.query.filter_by(created_by=current_user.id).first()
+            if not account:
+                account = Account(
+                    company_name="Default Company",
+                    created_by=current_user.id
+                )
+                db.session.add(account)
+                db.session.commit()
+            
+            # Get or create a default contact for the account
+            contact = Contact.query.filter_by(created_by=current_user.id, account_id=account.id).first()
+            if not contact:
+                contact = Contact(
+                    first_name="Default",
+                    last_name="Contact",
+                    email="default@example.com",
+                    account_id=account.id,
+                    created_by=current_user.id
+                )
+                db.session.add(contact)
+                db.session.commit()
+            
+            # Create the opportunity
             opportunity = Opportunity(
                 name=request.form['name'],
-                description=request.form.get('description'),
-                value=float(request.form['value']) if request.form.get('value') else None,
-                stage=request.form['stage'],
-                probability=int(request.form['probability']) if request.form.get('probability') else None,
-                expected_close_date=request.form.get('expected_close_date'),
-                account_id=request.form.get('account_id') if request.form.get('account_id') else None,
+                sales_stage=request.form.get('stage', 'prospecting'),
+                forecast=request.form.get('probability', '50'),
+                company_id=account.id,
+                contact_id=contact.id,
+                requirements=request.form.get('description'),
                 created_by=current_user.id
             )
             db.session.add(opportunity)
@@ -151,7 +194,38 @@ def add_opportunity():
             db.session.rollback()
     
     accounts = Account.query.filter_by(created_by=current_user.id).all()
-    return render_template('add_opportunity.html', accounts=accounts)
+    contacts = Contact.query.filter_by(created_by=current_user.id).all()
+    return render_template('add_opportunity.html', accounts=accounts, contacts=contacts)
+
+@main_bp.route('/leads/export')
+@login_required
+def export_leads():
+    """Export leads to CSV"""
+    leads = Lead.query.filter_by(created_by=current_user.id).all()
+    
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow(['Contact Person', 'Company', 'Email', 'Phone', 'Stage', 'Created Date'])
+    
+    # Write data
+    for lead in leads:
+        writer.writerow([
+            lead.contact_person,
+            lead.company_name or '',
+            lead.email,
+            lead.phone or '',
+            lead.stage,
+            lead.created_date.strftime('%Y-%m-%d') if lead.created_date else ''
+        ])
+    
+    output.seek(0)
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=leads_export.csv'
+    
+    return response
 
 @main_bp.route('/db-test')
 def db_test():

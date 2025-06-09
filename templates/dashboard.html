@@ -8,7 +8,7 @@
     
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <a href="{{ url_for('main.leads') }}" class="bg-blue-50 border border-blue-200 rounded-lg p-6 hover:shadow-lg hover:bg-blue-100 transition-all duration-200 transform hover:scale-105 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-blue-600 font-medium">Active Leads</p>
@@ -20,9 +20,9 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
         
-        <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+        <a href="{{ url_for('main.accounts') }}" class="bg-green-50 border border-green-200 rounded-lg p-6 hover:shadow-lg hover:bg-green-100 transition-all duration-200 transform hover:scale-105 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-green-600 font-medium">Accounts</p>
@@ -34,9 +34,9 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
         
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <a href="{{ url_for('main.contacts') }}" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 hover:shadow-lg hover:bg-yellow-100 transition-all duration-200 transform hover:scale-105 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-yellow-600 font-medium">Contacts</p>
@@ -48,9 +48,9 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
         
-        <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+        <a href="{{ url_for('main.opportunities') }}" class="bg-purple-50 border border-purple-200 rounded-lg p-6 hover:shadow-lg hover:bg-purple-100 transition-all duration-200 transform hover:scale-105 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-purple-600 font-medium">Opportunities</p>
@@ -62,7 +62,7 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <!-- Quick Actions -->
