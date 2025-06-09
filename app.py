@@ -8,10 +8,26 @@ def create_app():
     
     # Configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'azure-production-secret-2025')
+    app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for local development
     # Use PostgreSQL from environment or fall back to SQLite for local development
-    database_url = os.getenv('DATABASE_URL', 'sqlite:///instance/crm.db')
+    default_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'crm.db')
+    database_url = os.getenv('DATABASE_URL', f'sqlite:///{default_db_path}')
+    
+    # Handle PostgreSQL URL configuration for Azure
+    if database_url.startswith('postgresql://'):
+        # Azure PostgreSQL requires SSL
+        if '?sslmode=' not in database_url:
+            database_url += '?sslmode=require'
+    
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'connect_args': {
+            'sslmode': 'require'
+        } if database_url.startswith('postgresql://') else {}
+    }
 
     print(f"Database URL: {database_url[:50]}..." if len(database_url) > 50 else f"Database URL: {database_url}")
 

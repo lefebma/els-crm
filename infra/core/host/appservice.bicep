@@ -10,6 +10,9 @@ param userAssignedIdentityId string = ''
 param appSettings object = {}
 param serviceName string = 'web'
 
+// VNet integration parameters
+param subnetId string = ''
+
 resource appService 'Microsoft.Web/sites@2022-03-01' = {
   name: name
   location: location
@@ -37,6 +40,16 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
       }]
     }
     httpsOnly: true
+  }
+}
+
+// VNet integration for the app service
+resource vnetIntegration 'Microsoft.Web/sites/networkConfig@2022-03-01' = if (!empty(subnetId)) {
+  parent: appService
+  name: 'virtualNetwork'
+  properties: {
+    subnetResourceId: subnetId
+    swiftSupported: true
   }
 }
 

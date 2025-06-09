@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import Lead, Account, Contact, Opportunity, User
 from database import db
@@ -25,25 +25,133 @@ def dashboard():
 @login_required
 def leads():
     """Leads management page"""
-    return render_template('leads.html')
+    leads = Lead.query.filter_by(created_by=current_user.id).all()
+    return render_template('leads.html', leads=leads)
+
+@main_bp.route('/leads/add', methods=['GET', 'POST'])
+@login_required
+def add_lead():
+    """Add new lead"""
+    if request.method == 'POST':
+        try:
+            # Map form fields to model fields
+            contact_person = f"{request.form['first_name']} {request.form['last_name']}"
+            lead = Lead(
+                contact_person=contact_person,
+                company_name=request.form.get('company', 'Unknown'),
+                email=request.form['email'],
+                phone=request.form.get('phone'),
+                stage=request.form.get('status', 'MAL'),  # Map status to stage
+                created_by=current_user.id
+            )
+            db.session.add(lead)
+            db.session.commit()
+            flash('Lead added successfully!', 'success')
+            return redirect(url_for('main.leads'))
+        except Exception as e:
+            flash(f'Error adding lead: {str(e)}', 'error')
+            db.session.rollback()
+    
+    return render_template('add_lead.html')
 
 @main_bp.route('/accounts')
 @login_required
 def accounts():
     """Accounts management page"""
-    return render_template('accounts.html')
+    accounts = Account.query.filter_by(created_by=current_user.id).all()
+    return render_template('accounts.html', accounts=accounts)
+
+@main_bp.route('/accounts/add', methods=['GET', 'POST'])
+@login_required
+def add_account():
+    """Add new account"""
+    if request.method == 'POST':
+        try:
+            account = Account(
+                name=request.form['name'],
+                industry=request.form.get('industry'),
+                website=request.form.get('website'),
+                phone=request.form.get('phone'),
+                email=request.form.get('email'),
+                address=request.form.get('address'),
+                created_by=current_user.id
+            )
+            db.session.add(account)
+            db.session.commit()
+            flash('Account added successfully!', 'success')
+            return redirect(url_for('main.accounts'))
+        except Exception as e:
+            flash(f'Error adding account: {str(e)}', 'error')
+            db.session.rollback()
+    
+    return render_template('add_account.html')
 
 @main_bp.route('/contacts')
 @login_required
 def contacts():
     """Contacts management page"""
-    return render_template('contacts.html')
+    contacts = Contact.query.filter_by(created_by=current_user.id).all()
+    return render_template('contacts.html', contacts=contacts)
+
+@main_bp.route('/contacts/add', methods=['GET', 'POST'])
+@login_required
+def add_contact():
+    """Add new contact"""
+    if request.method == 'POST':
+        try:
+            contact = Contact(
+                first_name=request.form['first_name'],
+                last_name=request.form['last_name'],
+                email=request.form['email'],
+                phone=request.form.get('phone'),
+                job_title=request.form.get('job_title'),
+                account_id=request.form.get('account_id') if request.form.get('account_id') else None,
+                created_by=current_user.id
+            )
+            db.session.add(contact)
+            db.session.commit()
+            flash('Contact added successfully!', 'success')
+            return redirect(url_for('main.contacts'))
+        except Exception as e:
+            flash(f'Error adding contact: {str(e)}', 'error')
+            db.session.rollback()
+    
+    accounts = Account.query.filter_by(created_by=current_user.id).all()
+    return render_template('add_contact.html', accounts=accounts)
 
 @main_bp.route('/opportunities')
 @login_required
 def opportunities():
     """Opportunities management page"""
-    return render_template('opportunities.html')
+    opportunities = Opportunity.query.filter_by(created_by=current_user.id).all()
+    return render_template('opportunities.html', opportunities=opportunities)
+
+@main_bp.route('/opportunities/add', methods=['GET', 'POST'])
+@login_required
+def add_opportunity():
+    """Add new opportunity"""
+    if request.method == 'POST':
+        try:
+            opportunity = Opportunity(
+                name=request.form['name'],
+                description=request.form.get('description'),
+                value=float(request.form['value']) if request.form.get('value') else None,
+                stage=request.form['stage'],
+                probability=int(request.form['probability']) if request.form.get('probability') else None,
+                expected_close_date=request.form.get('expected_close_date'),
+                account_id=request.form.get('account_id') if request.form.get('account_id') else None,
+                created_by=current_user.id
+            )
+            db.session.add(opportunity)
+            db.session.commit()
+            flash('Opportunity added successfully!', 'success')
+            return redirect(url_for('main.opportunities'))
+        except Exception as e:
+            flash(f'Error adding opportunity: {str(e)}', 'error')
+            db.session.rollback()
+    
+    accounts = Account.query.filter_by(created_by=current_user.id).all()
+    return render_template('add_opportunity.html', accounts=accounts)
 
 @main_bp.route('/db-test')
 def db_test():
