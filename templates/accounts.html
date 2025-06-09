@@ -6,7 +6,7 @@
 <div class="bg-white p-6 rounded-lg shadow-md">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800">Accounts</h1>
-        <a href="{{ url_for('add_account') }}" 
+        <a href="{{ url_for('main.add_account') }}" 
            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
             Add New Account
         </a>
@@ -28,18 +28,12 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for account in accounts %}
                 <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ account.name }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ account.industry or '-' }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ account.phone or '-' }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% if account.website %}
-                            <a href="{{ account.website }}" target="_blank" class="text-blue-600 hover:text-blue-900">{{ account.website }}</a>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ account.employees or '-' }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ account.created_date.strftime('%Y-%m-%d') }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ account.company_name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ account.description or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ account.create_date.strftime('%Y-%m-%d') if account.create_date else '-' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -53,7 +47,7 @@
         <h3 class="mt-2 text-sm font-medium text-gray-900">No accounts found</h3>
         <p class="mt-1 text-sm text-gray-500">Get started by adding your first account.</p>
         <div class="mt-6">
-            <a href="{{ url_for('add_account') }}" 
+            <a href="{{ url_for('main.add_account') }}" 
                class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
                 Add Account
             </a>

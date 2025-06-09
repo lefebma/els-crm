@@ -8,12 +8,44 @@ def create_app():
     
     # Configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'azure-production-secret-2025')
+    app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for local development
     # Use PostgreSQL from environment or fall back to SQLite for local development
-    database_url = os.getenv('DATABASE_URL', 'sqlite:///instance/crm.db')
+    default_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'crm.db')
+    database_url = os.getenv('DATABASE_URL', f'sqlite:///{default_db_path}')
+    
+    # Handle PostgreSQL URL configuration for Azure
+    if database_url.startswith('postgresql://'):
+        # For Azure PostgreSQL, we need to inject the password from Key Vault
+        postgres_password = os.getenv('POSTGRES_PASSWORD')
+        if postgres_password:
+            # Parse the URL to inject the password
+            # Format: postgresql://username@host:port/database?params
+            # Target: postgresql://username:password@host:port/database?params
+            if '@' in database_url and ':' not in database_url.split('@')[0].split('//')[-1]:
+                # Split at @ and inject password before @
+                parts = database_url.split('@')
+                username_part = parts[0]  # postgresql://username
+                host_part = '@'.join(parts[1:])  # host:port/database?params
+                database_url = f"{username_part}:{postgres_password}@{host_part}"
+        
+        # Azure PostgreSQL requires SSL
+        if '?sslmode=' not in database_url:
+            database_url += '?sslmode=require'
+    
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'connect_args': {
+            'sslmode': 'require'
+        } if database_url.startswith('postgresql://') else {}
+    }
 
     print(f"Database URL: {database_url[:50]}..." if len(database_url) > 50 else f"Database URL: {database_url}")
+    print(f"POSTGRES_PASSWORD environment variable: {'Present' if os.getenv('POSTGRES_PASSWORD') else 'Missing'}")
+    if database_url.startswith('postgresql://'):
+        print(f"PostgreSQL URL detected - Password injection: {'Applied' if postgres_password else 'Skipped'}")
 
     # Initialize extensions
     from database import db, login_manager

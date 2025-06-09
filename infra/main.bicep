@@ -21,7 +21,7 @@ param principalId string = ''
 
 // Variables
 var abbrs = loadJsonContent('./abbreviations.json')
-var resourceToken = toLower(uniqueString(subscription().id, environmentName))
+var resourceToken = uniqueString(subscription().id, environmentName)
 var tags = { 'azd-env-name': environmentName }
 
 // Organize resources in a resource group
@@ -42,6 +42,31 @@ module userAssignedIdentity './core/security/userassignedidentity.bicep' = {
   }
 }
 
+// Create a variable for the PostgreSQL server name to reuse
+var postgresServerName_calculated = !empty(postgresServerName) ? postgresServerName : '${abbrs.dBforPostgreSQLServers}${resourceToken}'
+
+// Virtual Network for secure networking
+module vnet './core/network/virtualnetwork.bicep' = {
+  name: 'vnet'
+  scope: rg
+  params: {
+    name: 'vnet-${resourceToken}'
+    location: location
+    tags: tags
+  }
+}
+
+// Private DNS Zone for PostgreSQL Flexible Server
+module privateDnsZone './core/network/privatednszone.bicep' = {
+  name: 'private-dns-zone'
+  scope: rg
+  params: {
+    name: 'privatelink.postgres.database.azure.com'
+    tags: tags
+    virtualNetworkId: vnet.outputs.id
+  }
+}
+
 // The application frontend
 module web './core/host/appservice.bicep' = {
   name: 'web'
@@ -56,9 +81,13 @@ module web './core/host/appservice.bicep' = {
     managedIdentity: true
     userAssignedIdentityId: userAssignedIdentity.outputs.id
     serviceName: 'web'
+    // VNet integration for secure access to PostgreSQL
+    subnetId: vnet.outputs.appSubnetId
     appSettings: {
-      DATABASE_URL: postgresDb.outputs.connectionString
+      DATABASE_URL: 'postgresql://crmadmin@${postgresDb.outputs.fqdn}:5432/crm?sslmode=require'
+      POSTGRES_PASSWORD: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.name};SecretName=postgres-password)'
       SECRET_KEY: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.name};SecretName=secret-key)'
+      AZURE_KEY_VAULT_URL: keyVault.outputs.uri
       FLASK_ENV: 'production'
       FLASK_APP: 'app.py'
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
@@ -85,7 +114,7 @@ module postgresDb './core/database/postgresql/flexibleserver.bicep' = {
   name: 'postgres'
   scope: rg
   params: {
-    name: !empty(postgresServerName) ? postgresServerName : '${abbrs.dBforPostgreSQLServers}${resourceToken}'
+    name: postgresServerName_calculated
     location: location
     tags: tags
     sku: {
@@ -99,7 +128,9 @@ module postgresDb './core/database/postgresql/flexibleserver.bicep' = {
     administratorLogin: 'crmadmin'
     administratorLoginPassword: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.name};SecretName=postgres-password)'
     databaseNames: ['crm']
-    allowAzureIPsFirewall: true
+    // VNet integration for secure private access
+    delegatedSubnetResourceId: vnet.outputs.postgresSubnetId
+    privateDnsZoneId: privateDnsZone.outputs.id
   }
 }
 
@@ -132,3 +163,12 @@ output POSTGRES_DATABASE_NAME string = 'crm'
 
 output KEY_VAULT_NAME string = keyVault.outputs.name
 output KEY_VAULT_URI string = keyVault.outputs.uri
+
+// VNet outputs for reference
+output VNET_NAME string = vnet.outputs.name
+output VNET_ID string = vnet.outputs.id
+output PRIVATE_DNS_ZONE_NAME string = privateDnsZone.outputs.name
+
+// Additional required outputs
+output DATABASE_URL string = 'postgresql://crmadmin@${postgresDb.outputs.fqdn}:5432/crm?sslmode=require'
+output SECRET_KEY string = '@Microsoft.KeyVault(VaultName=${keyVault.outputs.name};SecretName=secret-key)'

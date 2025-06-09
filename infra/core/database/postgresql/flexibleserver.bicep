@@ -16,7 +16,10 @@ param administratorLogin string
 @secure()
 param administratorLoginPassword string
 param databaseNames array = []
-param allowAzureIPsFirewall bool = false
+
+// VNet integration parameters
+param delegatedSubnetResourceId string = ''
+param privateDnsZoneId string = ''
 
 resource postgresqlServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-12-01' = {
   name: name
@@ -39,17 +42,16 @@ resource postgresqlServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-12-01'
       backupRetentionDays: 7
       geoRedundantBackup: 'Disabled'
     }
+    // VNet integration for private access
+    network: !empty(delegatedSubnetResourceId) ? {
+      delegatedSubnetResourceId: delegatedSubnetResourceId
+      privateDnsZoneArmResourceId: privateDnsZoneId
+    } : null
   }
 }
 
-resource postgresqlServerFirewallRules 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2022-12-01' = if (allowAzureIPsFirewall) {
-  parent: postgresqlServer
-  name: 'allow-all-azure-internal-IPs'
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
+// Note: Firewall rules are not compatible with VNet integration
+// When using VNet integration, access is controlled through the virtual network
 
 resource postgresqlDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-12-01' = [for databaseName in databaseNames: {
   parent: postgresqlServer
@@ -63,4 +65,4 @@ resource postgresqlDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases
 output id string = postgresqlServer.id
 output name string = postgresqlServer.name
 output fqdn string = postgresqlServer.properties.fullyQualifiedDomainName
-output connectionString string = 'postgresql://${administratorLogin}:${administratorLoginPassword}@${postgresqlServer.properties.fullyQualifiedDomainName}:5432/${databaseNames[0]}?sslmode=require'
+output connectionString string = 'postgresql://${administratorLogin}@${postgresqlServer.properties.fullyQualifiedDomainName}:5432/${databaseNames[0]}?sslmode=require'
