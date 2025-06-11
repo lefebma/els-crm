@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Agile CRM{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'blue-600': '#2563eb',
+                        'blue-700': '#1d4ed8',
+                        'indigo-700': '#4338ca'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-100 font-sans text-gray-900">
+    {% if current_user.is_authenticated %}
+    <!-- Header and Navigation -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg p-4">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-3xl font-bold mb-4 md:mb-0">
+                <a href="{{ url_for('main.dashboard') }}">ELS CRM</a>
+            </h1>
+            <nav class="flex items-center space-x-4">
+                <ul class="flex flex-wrap justify-center space-x-4 md:space-x-6">
+                    <li>
+                        <a href="{{ url_for('main.dashboard') }}" class="px-4 py-2 rounded-full transition-all duration-200 hover:bg-blue-700">
+                            Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.leads') }}" class="px-4 py-2 rounded-full transition-all duration-200 hover:bg-blue-700">
+                            Leads
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.accounts') }}" class="px-4 py-2 rounded-full transition-all duration-200 hover:bg-blue-700">
+                            Accounts
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.contacts') }}" class="px-4 py-2 rounded-full transition-all duration-200 hover:bg-blue-700">
+                            Contacts
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.opportunities') }}" class="px-4 py-2 rounded-full transition-all duration-200 hover:bg-blue-700">
+                            Opportunities
+                        </a>
+                    </li>
+                </ul>
+                <div class="flex items-center space-x-4 ml-6">
+                    <span class="text-sm">{{ current_user.first_name }} {{ current_user.last_name }}</span>
+                    <a href="{{ url_for('auth.logout') }}" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm transition-colors">
+                        Logout
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </header>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mx-auto mt-4">
+                {% for category, message in messages %}
+                    <div class="flash-message alert alert-{{ 'danger' if category == 'error' else category }} bg-{{ 'red' if category == 'error' else 'green' if category == 'success' else 'blue' }}-100 border border-{{ 'red' if category == 'error' else 'green' if category == 'success' else 'blue' }}-400 text-{{ 'red' if category == 'error' else 'green' if category == 'success' else 'blue' }}-700 px-4 py-3 rounded mb-4 relative">
+                        <button onclick="this.parentElement.style.display='none'" class="absolute top-2 right-2 text-xl leading-none cursor-pointer opacity-50 hover:opacity-100">&times;</button>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="{% if current_user.is_authenticated %}container mx-auto p-6{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}
+    <script>
+        // Auto-dismiss flash messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.style.display = 'none';
+                    }, 300);
+                }, 5000);
+            });
+        });
+        
+        // Add loading states to forms
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(function(form) {
+                form.addEventListener('submit', function() {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>Processing...';
+                    }
+                });
+            });
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

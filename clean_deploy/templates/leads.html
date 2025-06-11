@@ -46,7 +46,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edit</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -70,10 +70,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lead.created_date.strftime('%Y-%m-%d') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <a href="{{ url_for('main.edit_lead', lead_id=lead.id) }}" 
-                           class="bg-blue-600 text-white px-3 py-2 text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            Edit
-                        </a>
+                        <button class="btn btn-primary edit-lead" data-lead-id="{{ lead.id }}" data-lead-stage="{{ lead.stage }}">Edit</button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -121,16 +118,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
     searchInput.addEventListener('input', filterTable);
     stageFilter.addEventListener('change', filterTable);
-
-    // Display flash messages if any
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          alert('{{ message|safe }}');
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
 });
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      alert("{{ message }}");
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+</script>
+{% endblock %}
+
+{% block modal %}
+<!-- Edit Lead Modal -->
+<div class="modal fade" id="editLeadModal" tabindex="-1" aria-labelledby="editLeadModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editLeadModalLabel">Edit Lead</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editLeadForm" action="{{ url_for('main.edit_lead') }}" method="POST">
+          <input type="hidden" name="lead_id" id="editLeadId" value="" />
+          <div class="mb-3">
+            <label for="editLeadStage" class="form-label">Status (Stage)</label>
+            <select class="form-select" id="editLeadStage" name="stage">
+              <option value="MAL">MAL</option>
+              <option value="Qualified">Qualified</option>
+              <option value="Proposal">Proposal</option>
+              <option value="Negotiation">Negotiation</option>
+              <option value="Closed Won">Closed Won</option>
+              <option value="Closed Lost">Closed Lost</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- (Optional) Display flash messages (if any) -->
+<script>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        alert("{{ message }}");
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+</script>
+
+<!-- (Optional) Open modal (and populate form) when "Edit" button is clicked (using jQuery) -->
+<script>
+  $(document).ready(function() {
+    $(".edit-lead").click(function() {
+      var leadId = $(this).data("lead-id");
+      var leadStage = $(this).data("lead-stage");
+      $("#editLeadId").val(leadId);
+      $("#editLeadStage").val(leadStage);
+      var editModal = new bootstrap.Modal(document.getElementById("editLeadModal"));
+      editModal.show();
+    });
+  });
 </script>
 {% endblock %}
 {% endblock %}

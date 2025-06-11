@@ -56,50 +56,6 @@ def add_lead():
     
     return render_template('add_lead.html')
 
-@main_bp.route('/leads/edit/<lead_id>', methods=['GET', 'POST'])
-@login_required
-def edit_lead(lead_id):
-    """Edit an existing lead"""
-    # Find the lead and ensure it belongs to the current user
-    lead = Lead.query.filter_by(id=lead_id, created_by=current_user.id).first()
-    if not lead:
-        flash('Lead not found or access denied', 'error')
-        return redirect(url_for('main.leads'))
-    
-    if request.method == 'GET':
-        # Display the edit form
-        return render_template('edit_lead.html', lead=lead)
-    
-    # Handle POST request (form submission)
-    try:
-        # Get all form fields
-        contact_person = request.form.get('contact_person')
-        email = request.form.get('email')
-        company_name = request.form.get('company_name')
-        phone = request.form.get('phone')
-        stage = request.form.get('stage')
-        
-        # Validate required fields
-        if not contact_person or not email or not stage:
-            flash('Please fill in all required fields (Contact Person, Email, and Stage)', 'error')
-            return render_template('edit_lead.html', lead=lead)
-        
-        # Update the lead fields
-        lead.contact_person = contact_person.strip()
-        lead.email = email.strip()
-        lead.company_name = company_name.strip() if company_name else None
-        lead.phone = phone.strip() if phone else None
-        lead.stage = stage
-        
-        db.session.commit()
-        flash('Lead updated successfully!', 'success')
-        
-    except Exception as e:
-        flash(f'Error updating lead: {str(e)}', 'error')
-        db.session.rollback()
-    
-    return redirect(url_for('main.leads'))
-
 @main_bp.route('/accounts')
 @login_required
 def accounts():

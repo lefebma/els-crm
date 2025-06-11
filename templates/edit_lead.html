@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Lead - Agile CRM{% endblock %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Edit Lead</h1>
+        <a href="{{ url_for('main.leads') }}" 
+           class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+            ← Back to Leads
+        </a>
+    </div>
+
+    <div class="max-w-2xl">
+        <!-- Lead Information Card -->
+        <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Lead Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Contact Person:</span>
+                    <p class="text-gray-900">{{ lead.contact_person }}</p>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Company:</span>
+                    <p class="text-gray-900">{{ lead.company_name or 'N/A' }}</p>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Email:</span>
+                    <p class="text-gray-900">{{ lead.email }}</p>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Phone:</span>
+                    <p class="text-gray-900">{{ lead.phone or 'N/A' }}</p>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Created:</span>
+                    <p class="text-gray-900">{{ lead.created_date.strftime('%Y-%m-%d %H:%M') if lead.created_date else 'N/A' }}</p>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Current Stage:</span>
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                               {% if lead.stage == 'MAL' %}bg-blue-100 text-blue-800
+                               {% elif lead.stage == 'MQL' %}bg-yellow-100 text-yellow-800
+                               {% elif lead.stage == 'SAL' %}bg-green-100 text-green-800
+                               {% elif lead.stage == 'SQL' %}bg-purple-100 text-purple-800
+                               {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ lead.stage }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Form -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Edit Lead Information</h2>
+            
+            <form action="{{ url_for('main.edit_lead', lead_id=lead.id) }}" method="POST" class="space-y-6">
+                <!-- Contact Person -->
+                <div>
+                    <label for="contact_person" class="block text-sm font-medium text-gray-700 mb-2">
+                        Contact Person <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="contact_person" id="contact_person" required
+                           value="{{ lead.contact_person }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address <span class="text-red-500">*</span>
+                    </label>
+                    <input type="email" name="email" id="email" required
+                           value="{{ lead.email }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Company Name -->
+                <div>
+                    <label for="company_name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Company Name
+                    </label>
+                    <input type="text" name="company_name" id="company_name"
+                           value="{{ lead.company_name or '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Phone -->
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number
+                    </label>
+                    <input type="tel" name="phone" id="phone"
+                           value="{{ lead.phone or '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Lead Stage -->
+                <div>
+                    <label for="stage" class="block text-sm font-medium text-gray-700 mb-2">
+                        Lead Stage <span class="text-red-500">*</span>
+                    </label>
+                    <select name="stage" id="stage" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="MAL" {{ 'selected' if lead.stage == 'MAL' else '' }}>MAL - Marketing Accepted Lead</option>
+                        <option value="MQL" {{ 'selected' if lead.stage == 'MQL' else '' }}>MQL - Marketing Qualified Lead</option>
+                        <option value="SAL" {{ 'selected' if lead.stage == 'SAL' else '' }}>SAL - Sales Accepted Lead</option>
+                        <option value="SQL" {{ 'selected' if lead.stage == 'SQL' else '' }}>SQL - Sales Qualified Lead</option>
+                    </select>
+                    <p class="text-sm text-gray-500 mt-1">Select the appropriate stage for this lead in the sales process.</p>
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit" 
+                            class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium">
+                        Update Lead
+                    </button>
+                    <a href="{{ url_for('main.leads') }}" 
+                       class="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lead Actions -->
+        <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h3 class="text-md font-semibold text-blue-800 mb-2">Lead Actions</h3>
+            <p class="text-sm text-blue-700 mb-3">Convert this lead to create accounts, contacts, or opportunities:</p>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ url_for('main.add_account') }}" 
+                   class="bg-blue-600 text-white px-3 py-2 text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Convert to Account
+                </a>
+                <a href="{{ url_for('main.add_contact') }}" 
+                   class="bg-green-600 text-white px-3 py-2 text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                    Convert to Contact
+                </a>
+                <a href="{{ url_for('main.add_opportunity') }}" 
+                   class="bg-purple-600 text-white px-3 py-2 text-sm rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                    Convert to Opportunity
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
