@@ -130,6 +130,66 @@ def add_account():
     
     return render_template('add_account.html')
 
+@main_bp.route('/accounts/edit/<account_id>', methods=['GET', 'POST'])
+@login_required
+def edit_account(account_id):
+    """Edit an existing account"""
+    # Find the account and ensure it belongs to the current user
+    account = Account.query.filter_by(id=account_id, created_by=current_user.id).first()
+    if not account:
+        flash('Account not found or access denied', 'error')
+        return redirect(url_for('main.accounts'))
+    
+    if request.method == 'GET':
+        # Display the edit form
+        return render_template('edit_account.html', account=account)
+    
+    # Handle POST request (form submission)
+    try:
+        # Get all form fields
+        company_name = request.form.get('company_name')
+        description = request.form.get('description')
+        address_line1 = request.form.get('address_line1')
+        address_line2 = request.form.get('address_line2')
+        city = request.form.get('city')
+        state = request.form.get('state')
+        postal_code = request.form.get('postal_code')
+        country = request.form.get('country')
+        notes = request.form.get('notes')
+        market_segment = request.form.get('market_segment')
+        customer_since = request.form.get('customer_since')
+        last_activity = request.form.get('last_activity')
+        next_activity = request.form.get('next_activity')
+        
+        # Validate required fields
+        if not company_name:
+            flash('Company name is required', 'error')
+            return render_template('edit_account.html', account=account)
+        
+        # Update the account fields
+        account.company_name = company_name.strip()
+        account.description = description.strip() if description else None
+        account.address_line1 = address_line1.strip() if address_line1 else None
+        account.address_line2 = address_line2.strip() if address_line2 else None
+        account.city = city.strip() if city else None
+        account.state = state.strip() if state else None
+        account.postal_code = postal_code.strip() if postal_code else None
+        account.country = country.strip() if country else None
+        account.notes = notes.strip() if notes else None
+        account.market_segment = market_segment.strip() if market_segment else None
+        account.customer_since = customer_since.strip() if customer_since else None
+        account.last_activity = last_activity.strip() if last_activity else None
+        account.next_activity = next_activity.strip() if next_activity else None
+        
+        db.session.commit()
+        flash('Account updated successfully!', 'success')
+        
+    except Exception as e:
+        flash(f'Error updating account: {str(e)}', 'error')
+        db.session.rollback()
+    
+    return redirect(url_for('main.accounts'))
+
 @main_bp.route('/contacts')
 @login_required
 def contacts():
