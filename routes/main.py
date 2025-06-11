@@ -56,6 +56,35 @@ def add_lead():
     
     return render_template('add_lead.html')
 
+@main_bp.route('/leads/edit', methods=['POST'])
+@login_required
+def edit_lead():
+    """Edit an existing lead"""
+    try:
+        lead_id = request.form.get('lead_id')
+        new_stage = request.form.get('stage')
+        
+        if not lead_id or not new_stage:
+            flash('Missing lead ID or stage information', 'error')
+            return redirect(url_for('main.leads'))
+        
+        # Find the lead and ensure it belongs to the current user
+        lead = Lead.query.filter_by(id=lead_id, created_by=current_user.id).first()
+        if not lead:
+            flash('Lead not found or access denied', 'error')
+            return redirect(url_for('main.leads'))
+        
+        # Update the lead's stage
+        lead.stage = new_stage
+        db.session.commit()
+        flash('Lead updated successfully!', 'success')
+        
+    except Exception as e:
+        flash(f'Error updating lead: {str(e)}', 'error')
+        db.session.rollback()
+    
+    return redirect(url_for('main.leads'))
+
 @main_bp.route('/accounts')
 @login_required
 def accounts():
