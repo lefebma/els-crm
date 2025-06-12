@@ -16,6 +16,8 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    organization_id = db.Column(db.String(36), nullable=True)  # Shared organization ID
+    is_admin = db.Column(db.Boolean, default=False)  # Admin can invite others
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def set_password(self, password):
@@ -28,6 +30,29 @@ class User(UserMixin, db.Model):
     
     def __repr__(self):
         return f'<User {self.username}>'
+
+def get_organization_filter(user):
+    """Get the appropriate filter for organization-based data access"""
+    if user.organization_id:
+        return {'organization_id': user.organization_id}
+    else:
+        # Fallback to user-specific data for users without organization
+        return {'created_by': user.id}
+
+def set_organization_data(record, user):
+    """Set organization data when creating new records"""
+    if user.organization_id:
+        record.organization_id = user.organization_id
+    record.created_by = user.id
+    return record
+
+def create_organization_for_user(user):
+    """Create a new organization ID for a user and make them admin"""
+    import uuid
+    organization_id = str(uuid.uuid4())
+    user.organization_id = organization_id
+    user.is_admin = True
+    return organization_id
 
 class Lead(db.Model):
     """Lead model - prospects that haven't been qualified yet"""
@@ -44,6 +69,7 @@ class Lead(db.Model):
     is_converted = db.Column(db.Boolean, default=False)
     created_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    organization_id = db.Column(db.String(36), nullable=True)  # Shared organization
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
@@ -80,6 +106,7 @@ class Account(db.Model):
     account_planning_fields = db.Column(db.Text)
     create_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    organization_id = db.Column(db.String(36), nullable=True)  # Shared organization
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
@@ -111,6 +138,7 @@ class Contact(db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(200), nullable=False)
+    phone = db.Column(db.String(50))
     title = db.Column(db.String(200))
     notes = db.Column(db.Text)
     account_id = db.Column(db.String(36), db.ForeignKey('accounts.id'), nullable=False)
@@ -118,6 +146,7 @@ class Contact(db.Model):
     last_contact = db.Column(db.Date)
     create_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    organization_id = db.Column(db.String(36), nullable=True)  # Shared organization
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
@@ -130,6 +159,7 @@ class Contact(db.Model):
             'firstName': self.first_name,
             'lastName': self.last_name,
             'email': self.email,
+            'phone': self.phone,
             'title': self.title,
             'notes': self.notes,
             'accountId': self.account_id,
@@ -154,6 +184,7 @@ class Opportunity(db.Model):
     requirements = db.Column(db.Text)
     created_date = db.Column(db.Date, default=date.today)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    organization_id = db.Column(db.String(36), nullable=True)  # Shared organization
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships

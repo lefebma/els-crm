@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash, make_response
 from flask_login import login_required, current_user
-from models import Lead, Account, Contact, Opportunity, User
+from models import Lead, Account, Contact, Opportunity, User, get_organization_filter, set_organization_data
 from database import db
 import csv
 from io import StringIO
@@ -11,11 +11,14 @@ main_bp = Blueprint('main', __name__)
 @login_required
 def dashboard():
     """Main dashboard view"""
-    # Get counts for dashboard
-    leads_count = Lead.query.filter_by(created_by=current_user.id, is_converted=False).count()
-    accounts_count = Account.query.filter_by(created_by=current_user.id).count()
-    contacts_count = Contact.query.filter_by(created_by=current_user.id).count()
-    opportunities_count = Opportunity.query.filter_by(created_by=current_user.id).count()
+    # Get organization filter
+    org_filter = get_organization_filter(current_user)
+    
+    # Get counts for dashboard using organization filter
+    leads_count = Lead.query.filter_by(**org_filter, is_converted=False).count()
+    accounts_count = Account.query.filter_by(**org_filter).count()
+    contacts_count = Contact.query.filter_by(**org_filter).count()
+    opportunities_count = Opportunity.query.filter_by(**org_filter).count()
     
     return render_template('dashboard.html', 
                          leads_count=leads_count,
@@ -27,7 +30,8 @@ def dashboard():
 @login_required
 def leads():
     """Leads management page"""
-    leads = Lead.query.filter_by(created_by=current_user.id).all()
+    org_filter = get_organization_filter(current_user)
+    leads = Lead.query.filter_by(**org_filter).all()
     return render_template('leads.html', leads=leads)
 
 @main_bp.route('/leads/add', methods=['GET', 'POST'])
@@ -46,6 +50,8 @@ def add_lead():
                 stage=request.form.get('status', 'MAL'),  # Map status to stage
                 created_by=current_user.id
             )
+            # Set organization data
+            lead = set_organization_data(lead, current_user)
             db.session.add(lead)
             db.session.commit()
             flash('Lead added successfully!', 'success')
@@ -60,8 +66,9 @@ def add_lead():
 @login_required
 def edit_lead(lead_id):
     """Edit an existing lead"""
-    # Find the lead and ensure it belongs to the current user
-    lead = Lead.query.filter_by(id=lead_id, created_by=current_user.id).first()
+    # Find the lead using organization filter
+    org_filter = get_organization_filter(current_user)
+    lead = Lead.query.filter_by(id=lead_id, **org_filter).first()
     if not lead:
         flash('Lead not found or access denied', 'error')
         return redirect(url_for('main.leads'))
@@ -104,7 +111,8 @@ def edit_lead(lead_id):
 @login_required
 def accounts():
     """Accounts management page"""
-    accounts = Account.query.filter_by(created_by=current_user.id).all()
+    org_filter = get_organization_filter(current_user)
+    accounts = Account.query.filter_by(**org_filter).all()
     return render_template('accounts.html', accounts=accounts)
 
 @main_bp.route('/accounts/add', methods=['GET', 'POST'])
@@ -120,6 +128,8 @@ def add_account():
                 address_line1=request.form.get('address'),
                 created_by=current_user.id
             )
+            # Set organization data
+            account = set_organization_data(account, current_user)
             db.session.add(account)
             db.session.commit()
             flash('Account added successfully!', 'success')
@@ -134,8 +144,9 @@ def add_account():
 @login_required
 def edit_account(account_id):
     """Edit an existing account"""
-    # Find the account and ensure it belongs to the current user
-    account = Account.query.filter_by(id=account_id, created_by=current_user.id).first()
+    # Find the account using organization filter
+    org_filter = get_organization_filter(current_user)
+    account = Account.query.filter_by(id=account_id, **org_filter).first()
     if not account:
         flash('Account not found or access denied', 'error')
         return redirect(url_for('main.accounts'))
@@ -194,7 +205,8 @@ def edit_account(account_id):
 @login_required
 def contacts():
     """Contacts management page"""
-    contacts = Contact.query.filter_by(created_by=current_user.id).all()
+    org_filter = get_organization_filter(current_user)
+    contacts = Contact.query.filter_by(**org_filter).all()
     return render_template('contacts.html', contacts=contacts)
 
 @main_bp.route('/contacts/add', methods=['GET', 'POST'])
@@ -203,49 +215,122 @@ def add_contact():
     """Add new contact"""
     if request.method == 'POST':
         try:
-            # Get or create a default account for this user
-            account = Account.query.filter_by(created_by=current_user.id).first()
-            print(f"DEBUG: Found account: {account}")
+            # Get organization filter for accounts
+            org_filter = get_organization_filter(current_user)
+            
+            # Get or create a default account for this organization
+            account = Account.query.filter_by(**org_filter).first()
             if not account:
                 # Create a default account
                 account = Account(
                     company_name="Default Company",
                     created_by=current_user.id
                 )
+                # Set organization data
+                account = set_organization_data(account, current_user)
                 db.session.add(account)
                 db.session.commit()  # Commit to get the ID
-                print(f"DEBUG: Created new account: {account.id}")
-            else:
-                print(f"DEBUG: Using existing account: {account.id}")
             
             # Create the contact
-            print(f"DEBUG: About to create contact with account_id: {account.id}")
             contact = Contact(
                 first_name=request.form['first_name'],
                 last_name=request.form['last_name'],
                 email=request.form['email'],
+                phone=request.form.get('phone'),
                 title=request.form.get('job_title'),  # Map job_title to title
                 account_id=account.id,  # Use the account's ID directly
                 created_by=current_user.id
             )
-            print(f"DEBUG: Contact object created with account_id: {contact.account_id}")
+            # Set organization data
+            contact = set_organization_data(contact, current_user)
             db.session.add(contact)
             db.session.commit()
             flash('Contact added successfully!', 'success')
             return redirect(url_for('main.contacts'))
         except Exception as e:
-            print(f"DEBUG: Exception occurred: {str(e)}")
             flash(f'Error adding contact: {str(e)}', 'error')
             db.session.rollback()
     
-    accounts = Account.query.filter_by(created_by=current_user.id).all()
+    # Get accounts for this organization
+    org_filter = get_organization_filter(current_user)
+    accounts = Account.query.filter_by(**org_filter).all()
     return render_template('add_contact.html', accounts=accounts)
+
+@main_bp.route('/contacts/edit/<contact_id>', methods=['GET', 'POST'])
+@login_required
+def edit_contact(contact_id):
+    """Edit existing contact"""
+    # Find the contact using organization filter
+    org_filter = get_organization_filter(current_user)
+    contact = Contact.query.filter_by(id=contact_id, **org_filter).first()
+    if not contact:
+        flash('Contact not found or access denied', 'error')
+        return redirect(url_for('main.contacts'))
+    
+    if request.method == 'POST':
+        try:
+            # Get form data
+            first_name = request.form.get('first_name')
+            last_name = request.form.get('last_name')
+            email = request.form.get('email')
+            phone = request.form.get('phone')
+            title = request.form.get('title')
+            notes = request.form.get('notes')
+            account_id = request.form.get('account_id')
+            training_received = request.form.get('training_received')
+            last_contact_date = request.form.get('last_contact')
+            
+            # Validate required fields
+            if not first_name or not last_name or not email:
+                flash('First name, last name, and email are required', 'error')
+                accounts = Account.query.filter_by(**org_filter).all()
+                return render_template('edit_contact.html', contact=contact, accounts=accounts)
+            
+            # Validate account if provided
+            if account_id:
+                account = Account.query.filter_by(id=account_id, **org_filter).first()
+                if not account:
+                    flash('Invalid account selected', 'error')
+                    accounts = Account.query.filter_by(**org_filter).all()
+                    return render_template('edit_contact.html', contact=contact, accounts=accounts)
+            
+            # Update the contact fields
+            contact.first_name = first_name.strip()
+            contact.last_name = last_name.strip()
+            contact.email = email.strip()
+            contact.phone = phone.strip() if phone else None
+            contact.title = title.strip() if title else None
+            contact.notes = notes.strip() if notes else None
+            if account_id:
+                contact.account_id = account_id
+            contact.training_received = training_received.strip() if training_received else None
+            
+            # Handle last contact date
+            if last_contact_date:
+                try:
+                    from datetime import datetime
+                    contact.last_contact = datetime.strptime(last_contact_date, '%Y-%m-%d').date()
+                except ValueError:
+                    contact.last_contact = None
+            
+            db.session.commit()
+            flash('Contact updated successfully!', 'success')
+            return redirect(url_for('main.contacts'))
+            
+        except Exception as e:
+            flash(f'Error updating contact: {str(e)}', 'error')
+            db.session.rollback()
+    
+    # GET request - show the edit form
+    accounts = Account.query.filter_by(**org_filter).all()
+    return render_template('edit_contact.html', contact=contact, accounts=accounts)
 
 @main_bp.route('/opportunities')
 @login_required
 def opportunities():
     """Opportunities management page"""
-    opportunities = Opportunity.query.filter_by(created_by=current_user.id).options(
+    org_filter = get_organization_filter(current_user)
+    opportunities = Opportunity.query.filter_by(**org_filter).options(
         db.joinedload(Opportunity.account)
     ).all()
     return render_template('opportunities.html', opportunities=opportunities)
@@ -256,18 +341,22 @@ def add_opportunity():
     """Add new opportunity"""
     if request.method == 'POST':
         try:
-            # Get or create a default account for this user
-            account = Account.query.filter_by(created_by=current_user.id).first()
+            # Get organization filter
+            org_filter = get_organization_filter(current_user)
+            
+            # Get or create a default account for this organization
+            account = Account.query.filter_by(**org_filter).first()
             if not account:
                 account = Account(
                     company_name="Default Company",
                     created_by=current_user.id
                 )
+                account = set_organization_data(account, current_user)
                 db.session.add(account)
                 db.session.commit()
             
             # Get or create a default contact for the account
-            contact = Contact.query.filter_by(created_by=current_user.id, account_id=account.id).first()
+            contact = Contact.query.filter_by(account_id=account.id, **org_filter).first()
             if not contact:
                 contact = Contact(
                     first_name="Default",
@@ -276,6 +365,7 @@ def add_opportunity():
                     account_id=account.id,
                     created_by=current_user.id
                 )
+                contact = set_organization_data(contact, current_user)
                 db.session.add(contact)
                 db.session.commit()
             
@@ -289,6 +379,7 @@ def add_opportunity():
                 requirements=request.form.get('description'),
                 created_by=current_user.id
             )
+            opportunity = set_organization_data(opportunity, current_user)
             db.session.add(opportunity)
             db.session.commit()
             flash('Opportunity added successfully!', 'success')
@@ -297,15 +388,18 @@ def add_opportunity():
             flash(f'Error adding opportunity: {str(e)}', 'error')
             db.session.rollback()
     
-    accounts = Account.query.filter_by(created_by=current_user.id).all()
-    contacts = Contact.query.filter_by(created_by=current_user.id).all()
+    # Get accounts and contacts for this organization
+    org_filter = get_organization_filter(current_user)
+    accounts = Account.query.filter_by(**org_filter).all()
+    contacts = Contact.query.filter_by(**org_filter).all()
     return render_template('add_opportunity.html', accounts=accounts, contacts=contacts)
 
 @main_bp.route('/leads/export')
 @login_required
 def export_leads():
     """Export leads to CSV"""
-    leads = Lead.query.filter_by(created_by=current_user.id).all()
+    org_filter = get_organization_filter(current_user)
+    leads = Lead.query.filter_by(**org_filter).all()
     
     output = StringIO()
     writer = csv.writer(output)
@@ -367,31 +461,54 @@ def db_test():
 @login_required
 def convert_lead(lead_id):
     """Convert a lead via the UI (GET request)"""
-    lead = Lead.query.filter_by(id=lead_id, created_by=current_user.id).first()
+    org_filter = get_organization_filter(current_user)
+    lead = Lead.query.filter_by(id=lead_id, **org_filter).first()
     if not lead:
-        flash("Lead not found.", "error")
+        flash("Lead not found or access denied.", "error")
         return redirect(url_for("main.leads"))
     if lead.is_converted:
         flash("Lead already converted.", "info")
         return redirect(url_for("main.leads"))
     try:
-        # Call a helper (or inline conversion logic) to convert the lead.
-        # (For example, create an account, contact, and opportunity.)
-        # (Here we assume a helper _convert_lead(lead) exists or inline conversion is performed.)
-        # (If you have a helper, uncomment the next line.)
-        # _convert_lead(lead)
-        # (Inline conversion example (simplified) – adjust as needed):
-        account = Account(company_name=lead.company_name, description=f"Converted from lead: {lead.company_name}", created_by=current_user.id)
+        # Create account
+        account = Account(
+            company_name=lead.company_name, 
+            description=f"Converted from lead: {lead.company_name}", 
+            created_by=current_user.id
+        )
+        account = set_organization_data(account, current_user)
         db.session.add(account)
         db.session.flush()
+        
+        # Create contact
         name_parts = lead.contact_person.split(" ", 1)
         first_name = name_parts[0]
         last_name = name_parts[1] if len(name_parts) > 1 else ""
-        contact = Contact(first_name=first_name, last_name=last_name, email=lead.email, account_id=account.id, created_by=current_user.id)
+        contact = Contact(
+            first_name=first_name, 
+            last_name=last_name, 
+            email=lead.email, 
+            account_id=account.id, 
+            created_by=current_user.id
+        )
+        contact = set_organization_data(contact, current_user)
         db.session.add(contact)
         db.session.flush()
-        opportunity = Opportunity(name=f"Opportunity for {lead.company_name}", sales_stage="Prospecting", forecast="0%", company_id=account.id, contact_id=contact.id, next_steps="Initial outreach", requirements=f"Converted from lead: {lead.notes or 'No notes.'}", created_by=current_user.id)
+        
+        # Create opportunity
+        opportunity = Opportunity(
+            name=f"Opportunity for {lead.company_name}", 
+            sales_stage="Prospecting", 
+            forecast="0%", 
+            company_id=account.id, 
+            contact_id=contact.id, 
+            next_steps="Initial outreach", 
+            requirements=f"Converted from lead: {lead.notes or 'No notes.'}", 
+            created_by=current_user.id
+        )
+        opportunity = set_organization_data(opportunity, current_user)
         db.session.add(opportunity)
+        
         lead.is_converted = True
         db.session.commit()
         flash("Lead converted successfully.", "success")

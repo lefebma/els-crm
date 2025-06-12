@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from models import Lead, Account, Contact, Opportunity
+from models import Lead, Account, Contact, Opportunity, get_organization_filter, set_organization_data
 from database import db
 from datetime import datetime
 import uuid
@@ -16,7 +16,8 @@ api_bp = Blueprint('api', __name__)
 @login_required
 def get_leads():
     """Get all leads for current user"""
-    leads = Lead.query.filter_by(created_by=current_user.id, is_converted=False).all()
+    org_filter = get_organization_filter(current_user)
+    leads = Lead.query.filter_by(**org_filter, is_converted=False).all()
     return jsonify([lead.to_dict() for lead in leads])
 
 @api_bp.route('/leads', methods=['POST'])
@@ -43,6 +44,9 @@ def create_lead():
         created_by=current_user.id
     )
     
+    # Set organization data
+    lead = set_organization_data(lead, current_user)
+    
     try:
         db.session.add(lead)
         db.session.commit()
@@ -55,9 +59,10 @@ def create_lead():
 @login_required
 def update_lead(lead_id):
     """Update a lead"""
-    lead = Lead.query.filter_by(id=lead_id, created_by=current_user.id).first()
+    org_filter = get_organization_filter(current_user)
+    lead = Lead.query.filter_by(id=lead_id, **org_filter).first()
     if not lead:
-        return jsonify({'error': 'Lead not found'}), 404
+        return jsonify({'error': 'Lead not found or access denied'}), 404
     
     data = request.get_json()
     
@@ -88,9 +93,10 @@ def update_lead(lead_id):
 @login_required
 def convert_lead(lead_id):
     """Convert lead to account, contact, and opportunity"""
-    lead = Lead.query.filter_by(id=lead_id, created_by=current_user.id).first()
+    org_filter = get_organization_filter(current_user)
+    lead = Lead.query.filter_by(id=lead_id, **org_filter).first()
     if not lead:
-        return jsonify({'error': 'Lead not found'}), 404
+        return jsonify({'error': 'Lead not found or access denied'}), 404
     
     if lead.is_converted:
         return jsonify({'error': 'Lead already converted'}), 400
@@ -103,6 +109,7 @@ def convert_lead(lead_id):
             notes=lead.notes,
             created_by=current_user.id
         )
+        account = set_organization_data(account, current_user)
         db.session.add(account)
         db.session.flush()  # Get the account ID
         
@@ -120,6 +127,7 @@ def convert_lead(lead_id):
             last_contact=datetime.utcnow().date(),
             created_by=current_user.id
         )
+        contact = set_organization_data(contact, current_user)
         db.session.add(contact)
         db.session.flush()  # Get the contact ID
         
@@ -134,6 +142,7 @@ def convert_lead(lead_id):
             requirements=f'Initial requirements from lead: {lead.notes or "No specific requirements noted yet."}',
             created_by=current_user.id
         )
+        opportunity = set_organization_data(opportunity, current_user)
         db.session.add(opportunity)
         
         # Mark lead as converted
@@ -156,7 +165,8 @@ def convert_lead(lead_id):
 @login_required
 def get_accounts():
     """Get all accounts for current user"""
-    accounts = Account.query.filter_by(created_by=current_user.id).all()
+    org_filter = get_organization_filter(current_user)
+    accounts = Account.query.filter_by(**org_filter).all()
     return jsonify([account.to_dict() for account in accounts])
 
 @api_bp.route('/accounts', methods=['POST'])
@@ -182,6 +192,9 @@ def create_account():
         created_by=current_user.id
     )
     
+    # Set organization data
+    account = set_organization_data(account, current_user)
+    
     try:
         db.session.add(account)
         db.session.commit()
@@ -194,9 +207,10 @@ def create_account():
 @login_required
 def update_account(account_id):
     """Update an account"""
-    account = Account.query.filter_by(id=account_id, created_by=current_user.id).first()
+    org_filter = get_organization_filter(current_user)
+    account = Account.query.filter_by(id=account_id, **org_filter).first()
     if not account:
-        return jsonify({'error': 'Account not found'}), 404
+        return jsonify({'error': 'Account not found or access denied'}), 404
     
     data = request.get_json()
     
@@ -228,7 +242,8 @@ def update_account(account_id):
 @login_required
 def get_contacts():
     """Get all contacts for current user"""
-    contacts = Contact.query.filter_by(created_by=current_user.id).all()
+    org_filter = get_organization_filter(current_user)
+    contacts = Contact.query.filter_by(**org_filter).all()
     return jsonify([contact.to_dict() for contact in contacts])
 
 @api_bp.route('/contacts', methods=['POST'])
@@ -241,10 +256,11 @@ def create_contact():
     if not all(key in data for key in required_fields):
         return jsonify({'error': 'First Name, Last Name, Email, and Account are required'}), 400
     
-    # Verify account belongs to user
-    account = Account.query.filter_by(id=data['accountId'], created_by=current_user.id).first()
+    # Verify account belongs to organization
+    org_filter = get_organization_filter(current_user)
+    account = Account.query.filter_by(id=data['accountId'], **org_filter).first()
     if not account:
-        return jsonify({'error': 'Account not found'}), 404
+        return jsonify({'error': 'Account not found or access denied'}), 404
     
     contact = Contact(
         first_name=data['firstName'],
@@ -258,6 +274,9 @@ def create_contact():
         created_by=current_user.id
     )
     
+    # Set organization data
+    contact = set_organization_data(contact, current_user)
+    
     try:
         db.session.add(contact)
         db.session.commit()
@@ -270,9 +289,10 @@ def create_contact():
 @login_required
 def update_contact(contact_id):
     """Update a contact"""
-    contact = Contact.query.filter_by(id=contact_id, created_by=current_user.id).first()
+    org_filter = get_organization_filter(current_user)
+    contact = Contact.query.filter_by(id=contact_id, **org_filter).first()
     if not contact:
-        return jsonify({'error': 'Contact not found'}), 404
+        return jsonify({'error': 'Contact not found or access denied'}), 404
     
     data = request.get_json()
     
@@ -288,10 +308,10 @@ def update_contact(contact_id):
     if 'notes' in data:
         contact.notes = data['notes']
     if 'accountId' in data:
-        # Verify account belongs to user
-        account = Account.query.filter_by(id=data['accountId'], created_by=current_user.id).first()
+        # Verify account belongs to organization
+        account = Account.query.filter_by(id=data['accountId'], **org_filter).first()
         if not account:
-            return jsonify({'error': 'Account not found'}), 404
+            return jsonify({'error': 'Account not found or access denied'}), 404
         contact.account_id = data['accountId']
     if 'trainingReceived' in data:
         contact.training_received = data['trainingReceived']
@@ -310,7 +330,8 @@ def update_contact(contact_id):
 @login_required
 def get_opportunities():
     """Get all opportunities for current user"""
-    opportunities = Opportunity.query.filter_by(created_by=current_user.id).all()
+    org_filter = get_organization_filter(current_user)
+    opportunities = Opportunity.query.filter_by(**org_filter).all()
     return jsonify([opportunity.to_dict() for opportunity in opportunities])
 
 @api_bp.route('/opportunities', methods=['POST'])
@@ -323,14 +344,15 @@ def create_opportunity():
     if not all(key in data for key in required_fields):
         return jsonify({'error': 'Opportunity Name, Company, and Contact are required'}), 400
     
-    # Verify account and contact belong to user
-    account = Account.query.filter_by(id=data['companyId'], created_by=current_user.id).first()
+    # Verify account and contact belong to organization
+    org_filter = get_organization_filter(current_user)
+    account = Account.query.filter_by(id=data['companyId'], **org_filter).first()
     if not account:
-        return jsonify({'error': 'Account not found'}), 404
+        return jsonify({'error': 'Account not found or access denied'}), 404
     
-    contact = Contact.query.filter_by(id=data['contactId'], created_by=current_user.id).first()
+    contact = Contact.query.filter_by(id=data['contactId'], **org_filter).first()
     if not contact:
-        return jsonify({'error': 'Contact not found'}), 404
+        return jsonify({'error': 'Contact not found or access denied'}), 404
     
     opportunity = Opportunity(
         name=data['name'],
@@ -345,6 +367,9 @@ def create_opportunity():
         created_by=current_user.id
     )
     
+    # Set organization data
+    opportunity = set_organization_data(opportunity, current_user)
+    
     try:
         db.session.add(opportunity)
         db.session.commit()
@@ -357,9 +382,10 @@ def create_opportunity():
 @login_required
 def update_opportunity(opportunity_id):
     """Update an opportunity"""
-    opportunity = Opportunity.query.filter_by(id=opportunity_id, created_by=current_user.id).first()
+    org_filter = get_organization_filter(current_user)
+    opportunity = Opportunity.query.filter_by(id=opportunity_id, **org_filter).first()
     if not opportunity:
-        return jsonify({'error': 'Opportunity not found'}), 404
+        return jsonify({'error': 'Opportunity not found or access denied'}), 404
     
     data = request.get_json()
     
@@ -371,16 +397,16 @@ def update_opportunity(opportunity_id):
     if 'forecast' in data:
         opportunity.forecast = data['forecast']
     if 'companyId' in data:
-        # Verify account belongs to user
-        account = Account.query.filter_by(id=data['companyId'], created_by=current_user.id).first()
+        # Verify account belongs to organization
+        account = Account.query.filter_by(id=data['companyId'], **org_filter).first()
         if not account:
-            return jsonify({'error': 'Account not found'}), 404
+            return jsonify({'error': 'Account not found or access denied'}), 404
         opportunity.company_id = data['companyId']
     if 'contactId' in data:
-        # Verify contact belongs to user
-        contact = Contact.query.filter_by(id=data['contactId'], created_by=current_user.id).first()
+        # Verify contact belongs to organization
+        contact = Contact.query.filter_by(id=data['contactId'], **org_filter).first()
         if not contact:
-            return jsonify({'error': 'Contact not found'}), 404
+            return jsonify({'error': 'Contact not found or access denied'}), 404
         opportunity.contact_id = data['contactId']
     if 'nextSteps' in data:
         opportunity.next_steps = data['nextSteps']
