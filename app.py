@@ -56,7 +56,11 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        try:
+            return User.query.get(int(user_id))
+        except Exception as e:
+            print(f"Error loading user {user_id}: {e}")
+            return None
 
     # Import and register blueprints
     from routes.auth import auth_bp
@@ -68,6 +72,16 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(users_bp, url_prefix='/users')
+
+    # Error handlers
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        return "Internal server error. Please try again later.", 500
+    
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return "Page not found.", 404
 
     return app
 
@@ -85,22 +99,41 @@ def init_database():
             db.create_all()
             print("Database tables created successfully")
             
-            # Check if demo user exists, if not create it
-            demo_user = User.query.filter_by(username='demo').first()
-            if not demo_user:
-                print("Creating demo user...")
+            # Check if any users exist
+            user_count = User.query.count()
+            print(f"Current user count: {user_count}")
+            
+            # Create demo user if no users exist
+            if user_count == 0:
+                print("No users found, creating demo and admin users...")
+                
+                # Create demo user
                 demo_user = User(
                     username='demo',
                     email='demo@elscrm.com',
                     first_name='Demo',
-                    last_name='User',
-                    password_hash=generate_password_hash('demo123')
+                    last_name='User'
                 )
+                demo_user.set_password('demo123')
+                
+                # Create admin user
+                admin_user = User(
+                    username='admin',  
+                    email='admin@elscrm.com',
+                    first_name='Admin',
+                    last_name='User',
+                    is_admin=True
+                )
+                admin_user.set_password('admin123')
+                
                 db.session.add(demo_user)
+                db.session.add(admin_user)
                 db.session.commit()
-                print("Demo user created: username=demo, password=demo123")
+                print("Demo and admin users created successfully")
+                print("Demo user: username=demo, password=demo123")
+                print("Admin user: username=admin, password=admin123")
             else:
-                print("Demo user already exists")
+                print("Users already exist in database")
                 
         except Exception as e:
             print(f"Database initialization error: {e}")

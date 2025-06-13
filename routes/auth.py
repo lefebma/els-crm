@@ -10,31 +10,54 @@ auth_bp = Blueprint('auth', __name__)
 def login():
     """User login"""
     if request.method == 'POST':
-        if request.content_type == 'application/json':
-            data = request.get_json()
-            username = data.get('username')
-            password = data.get('password')
-        else:
-            username = request.form.get('username')
-            password = request.form.get('password')
-        
-        if not username or not password:
+        try:
             if request.content_type == 'application/json':
-                return jsonify({'success': False, 'message': 'Username and password are required'}), 400
-            flash('Username and password are required', 'error')
+                data = request.get_json()
+                username = data.get('username')
+                password = data.get('password')
+            else:
+                username = request.form.get('username')
+                password = request.form.get('password')
+            
+            if not username or not password:
+                if request.content_type == 'application/json':
+                    return jsonify({'success': False, 'message': 'Username and password are required'}), 400
+                flash('Username and password are required', 'error')
+                return render_template('auth/login.html')
+            
+            # Add database error handling
+            try:
+                user = User.query.filter_by(username=username).first()
+            except Exception as e:
+                print(f"Database error during user lookup: {e}")
+                if request.content_type == 'application/json':
+                    return jsonify({'success': False, 'message': 'Database error occurred'}), 500
+                flash('A database error occurred. Please try again.', 'error')
+                return render_template('auth/login.html')
+            
+            if user and user.check_password(password):
+                try:
+                    login_user(user)
+                    if request.content_type == 'application/json':
+                        return jsonify({'success': True, 'message': 'Login successful'})
+                    return redirect(url_for('main.dashboard'))
+                except Exception as e:
+                    print(f"Login error: {e}")
+                    if request.content_type == 'application/json':
+                        return jsonify({'success': False, 'message': 'Login failed'}), 500
+                    flash('Login failed. Please try again.', 'error')
+                    return render_template('auth/login.html')
+            else:
+                if request.content_type == 'application/json':
+                    return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+                flash('Invalid username or password', 'error')
+        
+        except Exception as e:
+            print(f"Unexpected error in login route: {e}")
+            if request.content_type == 'application/json':
+                return jsonify({'success': False, 'message': 'An unexpected error occurred'}), 500
+            flash('An unexpected error occurred. Please try again.', 'error')
             return render_template('auth/login.html')
-        
-        user = User.query.filter_by(username=username).first()
-        
-        if user and user.check_password(password):
-            login_user(user)
-            if request.content_type == 'application/json':
-                return jsonify({'success': True, 'message': 'Login successful'})
-            return redirect(url_for('main.dashboard'))
-        else:
-            if request.content_type == 'application/json':
-                return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-            flash('Invalid username or password', 'error')
     
     return render_template('auth/login.html')
 

@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash, make_response
 from flask_login import login_required, current_user
-from models import Lead, Account, Contact, Opportunity, User, get_organization_filter, set_organization_data
+from models import Lead, Account, Contact, Opportunity, User, get_organization_filter, set_organization_data, create_organization_for_user
 from database import db
 import csv
 from io import StringIO
+from datetime import datetime
 
 main_bp = Blueprint('main', __name__)
 
@@ -11,20 +12,25 @@ main_bp = Blueprint('main', __name__)
 @login_required
 def dashboard():
     """Main dashboard view"""
-    # Get organization filter
-    org_filter = get_organization_filter(current_user)
-    
-    # Get counts for dashboard using organization filter
-    leads_count = Lead.query.filter_by(**org_filter, is_converted=False).count()
-    accounts_count = Account.query.filter_by(**org_filter).count()
-    contacts_count = Contact.query.filter_by(**org_filter).count()
-    opportunities_count = Opportunity.query.filter_by(**org_filter).count()
-    
-    return render_template('dashboard.html', 
-                         leads_count=leads_count,
-                         accounts_count=accounts_count,
-                         contacts_count=contacts_count,
-                         opportunities_count=opportunities_count)
+    try:
+        # Get organization filter
+        org_filter = get_organization_filter(current_user)
+        
+        # Get counts for dashboard using organization filter
+        leads_count = Lead.query.filter_by(**org_filter, is_converted=False).count()
+        accounts_count = Account.query.filter_by(**org_filter).count()
+        contacts_count = Contact.query.filter_by(**org_filter).count()
+        opportunities_count = Opportunity.query.filter_by(**org_filter).count()
+        
+        return render_template('dashboard.html', 
+                             leads_count=leads_count,
+                             accounts_count=accounts_count,
+                             contacts_count=contacts_count,
+                             opportunities_count=opportunities_count)
+    except Exception as e:
+        current_app.logger.error(f"Dashboard error: {e}")
+        flash('Error loading dashboard. Please try logging in again.', 'error')
+        return redirect(url_for('auth.login'))
 
 @main_bp.route('/leads')
 @login_required
@@ -516,3 +522,8 @@ def convert_lead(lead_id):
         db.session.rollback()
         flash(f"Error converting lead: {str(e)}", "error")
     return redirect(url_for("main.leads"))
+
+@main_bp.route('/admin/migrate-database', methods=['POST'])
+def migrate_database():
+    """Emergency migration endpoint - DISABLED for security"""
+    return jsonify({'error': 'Migration endpoint disabled for security'}), 403
