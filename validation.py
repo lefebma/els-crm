@@ -50,7 +50,7 @@ def validate_lead_data(data):
         errors.append("Invalid phone number format")
     
     # Validate stage
-    valid_stages = ['MAL', 'MQL', 'SAL', 'SQL']
+    valid_stages = ['MQL', 'SAL', 'SQL']
     if 'stage' in data and data['stage'] and data['stage'] not in valid_stages:
         errors.append(f"Invalid stage. Must be one of: {', '.join(valid_stages)}")
     

@@ -64,7 +64,7 @@ class Lead(db.Model):
     email = db.Column(db.String(200), nullable=False)
     phone = db.Column(db.String(50))
     source = db.Column(db.String(100))
-    stage = db.Column(db.String(20), default='MAL')  # MAL, MQL, SAL, SQL
+    stage = db.Column(db.String(20), default='MQL')  # MQL, SAL, SQL
     notes = db.Column(db.Text)
     is_converted = db.Column(db.Boolean, default=False)
     created_date = db.Column(db.Date, default=date.today)

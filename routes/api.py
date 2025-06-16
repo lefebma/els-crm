@@ -39,7 +39,7 @@ def create_lead():
         email=data['email'],
         phone=data.get('phone', ''),
         source=data.get('source', ''),
-        stage=data.get('stage', 'MAL'),
+        stage=data.get('stage', 'MQL'),
         notes=data.get('notes', ''),
         created_by=current_user.id
     )

@@ -4,7 +4,7 @@ from models import Lead, Account, Contact, Opportunity, User, get_organization_f
 from database import db
 import csv
 from io import StringIO
-from datetime import datetime
+from datetime import datetime, date
 
 main_bp = Blueprint('main', __name__)
 
@@ -53,7 +53,7 @@ def add_lead():
                 company_name=request.form.get('company', 'Unknown'),
                 email=request.form['email'],
                 phone=request.form.get('phone'),
-                stage=request.form.get('status', 'MAL'),  # Map status to stage
+                stage=request.form.get('status', 'MQL'),  # Map status to stage
                 created_by=current_user.id
             )
             # Set organization data
@@ -480,6 +480,7 @@ def convert_lead(lead_id):
         account = Account(
             company_name=lead.company_name, 
             description=f"Converted from lead: {lead.company_name}", 
+            notes=lead.notes,
             created_by=current_user.id
         )
         account = set_organization_data(account, current_user)
@@ -494,7 +495,9 @@ def convert_lead(lead_id):
             first_name=first_name, 
             last_name=last_name, 
             email=lead.email, 
+            phone=lead.phone,
             account_id=account.id, 
+            last_contact=date.today(),
             created_by=current_user.id
         )
         contact = set_organization_data(contact, current_user)
@@ -508,8 +511,8 @@ def convert_lead(lead_id):
             forecast="0%", 
             company_id=account.id, 
             contact_id=contact.id, 
-            next_steps="Initial outreach", 
-            requirements=f"Converted from lead: {lead.notes or 'No notes.'}", 
+            next_steps=f"Follow up on converted lead from {lead.stage} stage", 
+            requirements=f"Converted from lead: {lead.notes or 'No specific requirements noted.'}",
             created_by=current_user.id
         )
         opportunity = set_organization_data(opportunity, current_user)
@@ -517,7 +520,9 @@ def convert_lead(lead_id):
         
         lead.is_converted = True
         db.session.commit()
-        flash("Lead converted successfully.", "success")
+        flash(f"Lead '{lead.contact_person}' successfully converted to Account, Contact, and Opportunity!", "success")
+        # Redirect to opportunities page as specified in conversion logic
+        return redirect(url_for("main.opportunities"))
     except Exception as e:
         db.session.rollback()
         flash(f"Error converting lead: {str(e)}", "error")

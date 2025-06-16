@@ -40,8 +40,7 @@
                 <div>
                     <span class="text-sm font-medium text-gray-600">Current Stage:</span>
                     <span class="px-2 py-1 text-xs font-semibold rounded-full 
-                               {% if lead.stage == 'MAL' %}bg-blue-100 text-blue-800
-                               {% elif lead.stage == 'MQL' %}bg-yellow-100 text-yellow-800
+                               {% if lead.stage == 'MQL' %}bg-yellow-100 text-yellow-800
                                {% elif lead.stage == 'SAL' %}bg-green-100 text-green-800
                                {% elif lead.stage == 'SQL' %}bg-purple-100 text-purple-800
                                {% else %}bg-red-100 text-red-800{% endif %}">
@@ -103,7 +102,6 @@
                     </label>
                     <select name="stage" id="stage" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="MAL" {{ 'selected' if lead.stage == 'MAL' else '' }}>MAL - Marketing Accepted Lead</option>
                         <option value="MQL" {{ 'selected' if lead.stage == 'MQL' else '' }}>MQL - Marketing Qualified Lead</option>
                         <option value="SAL" {{ 'selected' if lead.stage == 'SAL' else '' }}>SAL - Sales Accepted Lead</option>
                         <option value="SQL" {{ 'selected' if lead.stage == 'SQL' else '' }}>SQL - Sales Qualified Lead</option>
