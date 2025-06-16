@@ -21,7 +21,7 @@ param principalId string = ''
 
 // Variables
 var abbrs = loadJsonContent('./abbreviations.json')
-var resourceToken = uniqueString(subscription().id, environmentName)
+var resourceToken = uniqueString(subscription().id, environmentName, location)
 var tags = { 'azd-env-name': environmentName }
 
 // Organize resources in a resource group
