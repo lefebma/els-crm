@@ -94,7 +94,10 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex space-x-2">
-                            <span class="text-sm text-gray-500 italic">View/Edit coming soon</span>
+                            <a href="{{ url_for('main.edit_opportunity', opportunity_id=opportunity.id) }}" 
+                               class="bg-blue-600 text-white px-3 py-2 text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                Edit
+                            </a>
                         </div>
                     </td>
                 </tr>

@@ -189,8 +189,6 @@ class Opportunity(db.Model):
     
     # Relationships
     user = db.relationship('User', backref='opportunities')
-    account = db.relationship('Account', foreign_keys=[company_id])
-    contact = db.relationship('Contact', foreign_keys=[contact_id])
     
     def to_dict(self):
         return {

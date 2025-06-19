@@ -403,6 +403,73 @@ def add_opportunity():
     contacts = Contact.query.filter_by(**org_filter).all()
     return render_template('add_opportunity.html', accounts=accounts, contacts=contacts)
 
+@main_bp.route('/opportunities/edit/<opportunity_id>', methods=['GET', 'POST'])
+@login_required
+def edit_opportunity(opportunity_id):
+    """Edit an existing opportunity"""
+    # Find the opportunity using organization filter
+    org_filter = get_organization_filter(current_user)
+    opportunity = Opportunity.query.filter_by(id=opportunity_id, **org_filter).first()
+    if not opportunity:
+        flash('Opportunity not found or access denied', 'error')
+        return redirect(url_for('main.opportunities'))
+    
+    if request.method == 'GET':
+        # Get accounts and contacts for this organization for dropdowns
+        accounts = Account.query.filter_by(**org_filter).all()
+        contacts = Contact.query.filter_by(**org_filter).all()
+        return render_template('edit_opportunity.html', opportunity=opportunity, accounts=accounts, contacts=contacts)
+    
+    # Handle POST request (form submission)
+    try:
+        # Get all form fields
+        name = request.form.get('name')
+        sales_stage = request.form.get('sales_stage')
+        forecast = request.form.get('forecast')
+        company_id = request.form.get('company_id')
+        contact_id = request.form.get('contact_id')
+        requirements = request.form.get('requirements')
+        close_date_str = request.form.get('close_date')
+        next_steps = request.form.get('next_steps')
+        
+        # Validate required fields
+        if not name or not sales_stage:
+            flash('Please fill in all required fields (Name and Sales Stage)', 'error')
+            accounts = Account.query.filter_by(**org_filter).all()
+            contacts = Contact.query.filter_by(**org_filter).all()
+            return render_template('edit_opportunity.html', opportunity=opportunity, accounts=accounts, contacts=contacts)
+        
+        # Parse close date
+        close_date = None
+        if close_date_str:
+            try:
+                from datetime import datetime
+                close_date = datetime.strptime(close_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Invalid date format', 'error')
+                accounts = Account.query.filter_by(**org_filter).all()
+                contacts = Contact.query.filter_by(**org_filter).all()
+                return render_template('edit_opportunity.html', opportunity=opportunity, accounts=accounts, contacts=contacts)
+        
+        # Update the opportunity fields
+        opportunity.name = name.strip()
+        opportunity.sales_stage = sales_stage
+        opportunity.forecast = forecast.strip() if forecast else '50%'
+        opportunity.company_id = company_id if company_id else opportunity.company_id
+        opportunity.contact_id = contact_id if contact_id else opportunity.contact_id
+        opportunity.requirements = requirements.strip() if requirements else None
+        opportunity.close_date = close_date
+        opportunity.next_steps = next_steps.strip() if next_steps else None
+        
+        db.session.commit()
+        flash('Opportunity updated successfully!', 'success')
+        
+    except Exception as e:
+        flash(f'Error updating opportunity: {str(e)}', 'error')
+        db.session.rollback()
+    
+    return redirect(url_for('main.opportunities'))
+
 @main_bp.route('/leads/export')
 @login_required
 def export_leads():
