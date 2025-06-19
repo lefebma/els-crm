@@ -53,7 +53,8 @@ def add_lead():
                 company_name=request.form.get('company', 'Unknown'),
                 email=request.form['email'],
                 phone=request.form.get('phone'),
-                stage=request.form.get('status', 'MQL'),  # Map status to stage
+                source=request.form.get('source'),
+                stage=request.form.get('stage', 'MQL'),  # Use stage field directly
                 created_by=current_user.id
             )
             # Set organization data
@@ -90,6 +91,7 @@ def edit_lead(lead_id):
         email = request.form.get('email')
         company_name = request.form.get('company_name')
         phone = request.form.get('phone')
+        source = request.form.get('source')
         stage = request.form.get('stage')
         
         # Validate required fields
@@ -102,6 +104,7 @@ def edit_lead(lead_id):
         lead.email = email.strip()
         lead.company_name = company_name.strip() if company_name else None
         lead.phone = phone.strip() if phone else None
+        lead.source = source.strip() if source else None
         lead.stage = stage
         
         db.session.commit()
