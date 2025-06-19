@@ -1,88 +1,156 @@
 {% extends "base.html" %}
 
-{% block title %}Opportunities - ELS CRM{% endblock %}
+{% block title %}Opportunities - Agile CRM{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Opportunities</h2>
-                <a href="{{ url_for('main.add_opportunity') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add Opportunity
-                </a>
-            </div>
-
-            {% if opportunities %}
-                <div class="card">
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Account</th>
-                                        <th>Stage</th>
-                                        <th>Value</th>
-                                        <th>Close Date</th>
-                                        <th>Probability</th>
-                                        <th>Created</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for opportunity in opportunities %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ opportunity.name }}</strong>
-                                            {% if opportunity.requirements %}
-                                                <br><small class="text-muted">{{ opportunity.requirements[:50] }}{% if opportunity.requirements|length > 50 %}...{% endif %}</small>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ opportunity.account.company_name if opportunity.account else '-' }}</td>
-                                        <td>
-                                            <span class="badge {% if opportunity.sales_stage == 'Closed Won' %}bg-success{% elif opportunity.sales_stage == 'Closed Lost' %}bg-danger{% elif opportunity.sales_stage in ['Proposal', 'Negotiation'] %}bg-warning{% else %}bg-primary{% endif %}">
-                                                {{ opportunity.sales_stage }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            -
-                                        </td>
-                                        <td>{{ opportunity.close_date.strftime('%m/%d/%Y') if opportunity.close_date else '-' }}</td>
-                                        <td>
-                                            {% if opportunity.forecast %}
-                                                {{ opportunity.forecast }}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ opportunity.created_date.strftime('%m/%d/%Y') if opportunity.created_date else '-' }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <p class="text-muted">
-                        <i class="fas fa-info-circle"></i> 
-                        Showing {{ opportunities|length }} opportunity{{ 's' if opportunities|length != 1 else '' }}
-                    </p>
-                </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <div class="mb-4">
-                        <i class="fas fa-chart-line fa-4x text-muted"></i>
-                    </div>
-                    <h4 class="text-muted">No Opportunities Found</h4>
-                    <p class="text-muted mb-4">Start building your sales pipeline by adding your first opportunity.</p>
-                    <a href="{{ url_for('main.add_opportunity') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-plus"></i> Add Your First Opportunity
-                    </a>
-                </div>
-            {% endif %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Opportunities</h1>
+        <div class="space-x-2">
+            <a href="{{ url_for('main.add_opportunity') }}" 
+               class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Add New Opportunity
+            </a>
         </div>
     </div>
+    
+    <!-- Search and Filter -->
+    <div class="mb-6 flex flex-col sm:flex-row gap-4">
+        <div class="flex-1">
+            <input type="text" id="searchInput" placeholder="Search opportunities..." 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+            <select id="stageFilter" title="Filter by stage" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Stages</option>
+                <option value="Prospecting">Prospecting</option>
+                <option value="Qualification">Qualification</option>
+                <option value="Proposal">Proposal</option>
+                <option value="Negotiation">Negotiation</option>
+                <option value="Closed Won">Closed Won</option>
+                <option value="Closed Lost">Closed Lost</option>
+            </select>
+        </div>
+    </div>
+    
+    {% if opportunities %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Close Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Probability</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for opportunity in opportunities %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex flex-col">
+                            <div class="text-sm font-medium text-gray-900">{{ opportunity.name }}</div>
+                            {% if opportunity.requirements %}
+                                <div class="text-sm text-gray-500">{{ opportunity.requirements[:60] }}{% if opportunity.requirements|length > 60 %}...{% endif %}</div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ opportunity.account.company_name if opportunity.account else '-' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                   {% if opportunity.sales_stage == 'Closed Won' %}bg-green-100 text-green-800
+                                   {% elif opportunity.sales_stage == 'Closed Lost' %}bg-red-100 text-red-800
+                                   {% elif opportunity.sales_stage == 'Proposal' %}bg-yellow-100 text-yellow-800
+                                   {% elif opportunity.sales_stage == 'Negotiation' %}bg-orange-100 text-orange-800
+                                   {% elif opportunity.sales_stage == 'Qualification' %}bg-blue-100 text-blue-800
+                                   {% else %}bg-purple-100 text-purple-800{% endif %}">
+                            {{ opportunity.sales_stage }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        -
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ opportunity.close_date.strftime('%Y-%m-%d') if opportunity.close_date else '-' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if opportunity.forecast %}
+                            {{ opportunity.forecast }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ opportunity.created_date.strftime('%Y-%m-%d') if opportunity.created_date else '-' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex space-x-2">
+                            <span class="text-sm text-gray-500 italic">View/Edit coming soon</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No opportunities found</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by adding your first opportunity.</p>
+        <div class="mt-6">
+            <a href="{{ url_for('main.add_opportunity') }}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                Add Opportunity
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const stageFilter = document.getElementById('stageFilter');
+    const tableRows = document.querySelectorAll('tbody tr');
+
+    function filterTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedStage = stageFilter.value;
+
+        tableRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const stageElement = row.querySelector('.px-2.py-1');
+            const stage = stageElement ? stageElement.textContent.trim() : '';
+            
+            const matchesSearch = text.includes(searchTerm);
+            const matchesStage = !selectedStage || stage === selectedStage;
+            
+            row.style.display = matchesSearch && matchesStage ? '' : 'none';
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', filterTable);
+    if (stageFilter) stageFilter.addEventListener('change', filterTable);
+
+    // Display flash messages if any
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          alert('{{ message|safe }}');
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+});
+</script>
+{% endblock %}
 {% endblock %}
