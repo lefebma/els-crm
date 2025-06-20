@@ -62,8 +62,15 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                        {{ opportunity.account.company_name if opportunity.account else '-' }}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm border-r border-gray-200">
+                        {% if opportunity.account %}
+                            <a href="{{ url_for('main.edit_account', account_id=opportunity.account.id) }}" 
+                               class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                                {{ opportunity.account.company_name }}
+                            </a>
+                        {% else %}
+                            <span class="text-gray-500">-</span>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                         <span class="px-2 py-1 text-xs font-semibold rounded-full 
