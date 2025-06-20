@@ -228,21 +228,21 @@ def add_contact():
     """Add new contact"""
     if request.method == 'POST':
         try:
-            # Get organization filter for accounts
+            # Get organization filter
             org_filter = get_organization_filter(current_user)
             
-            # Get or create a default account for this organization
-            account = Account.query.filter_by(**org_filter).first()
-            if not account:
-                # Create a default account
-                account = Account(
-                    company_name="Default Company",
-                    created_by=current_user.id
-                )
-                # Set organization data
-                account = set_organization_data(account, current_user)
-                db.session.add(account)
-                db.session.commit()  # Commit to get the ID
+            # Get account_id from form (optional)
+            account_id = request.form.get('account_id')
+            
+            # Validate account if provided
+            if account_id and account_id.strip():
+                account = Account.query.filter_by(id=account_id, **org_filter).first()
+                if not account:
+                    flash('Invalid account selected', 'error')
+                    accounts = Account.query.filter_by(**org_filter).all()
+                    return render_template('add_contact.html', accounts=accounts)
+            else:
+                account_id = None  # Set to None if empty string
             
             # Create the contact
             contact = Contact(
@@ -251,7 +251,7 @@ def add_contact():
                 email=request.form['email'],
                 phone=request.form.get('phone'),
                 title=request.form.get('job_title'),  # Map job_title to title
-                account_id=account.id,  # Use the account's ID directly
+                account_id=account_id,  # This will be None if no account selected
                 created_by=current_user.id
             )
             # Set organization data
@@ -263,6 +263,10 @@ def add_contact():
         except Exception as e:
             flash(f'Error adding contact: {str(e)}', 'error')
             db.session.rollback()
+            # Get accounts for template in case of error
+            org_filter = get_organization_filter(current_user)
+            accounts = Account.query.filter_by(**org_filter).all()
+            return render_template('add_contact.html', accounts=accounts)
     
     # Get accounts for this organization
     org_filter = get_organization_filter(current_user)
@@ -300,12 +304,14 @@ def edit_contact(contact_id):
                 return render_template('edit_contact.html', contact=contact, accounts=accounts)
             
             # Validate account if provided
-            if account_id:
+            if account_id and account_id.strip():
                 account = Account.query.filter_by(id=account_id, **org_filter).first()
                 if not account:
                     flash('Invalid account selected', 'error')
                     accounts = Account.query.filter_by(**org_filter).all()
                     return render_template('edit_contact.html', contact=contact, accounts=accounts)
+            else:
+                account_id = None  # Set to None if empty string
             
             # Update the contact fields
             contact.first_name = first_name.strip()
@@ -314,8 +320,7 @@ def edit_contact(contact_id):
             contact.phone = phone.strip() if phone else None
             contact.title = title.strip() if title else None
             contact.notes = notes.strip() if notes else None
-            if account_id:
-                contact.account_id = account_id
+            contact.account_id = account_id  # This will be None if no account selected
             contact.training_received = training_received.strip() if training_received else None
             
             # Handle last contact date
