@@ -161,8 +161,10 @@ def edit_account(account_id):
         return redirect(url_for('main.accounts'))
     
     if request.method == 'GET':
+        # Get contacts associated with this account
+        contacts = Contact.query.filter_by(account_id=account.id).filter_by(**org_filter).all()
         # Display the edit form
-        return render_template('edit_account.html', account=account)
+        return render_template('edit_account.html', account=account, contacts=contacts)
     
     # Handle POST request (form submission)
     try:
@@ -184,7 +186,9 @@ def edit_account(account_id):
         # Validate required fields
         if not company_name:
             flash('Company name is required', 'error')
-            return render_template('edit_account.html', account=account)
+            # Get contacts for display even in error case
+            contacts = Contact.query.filter_by(account_id=account.id).filter_by(**org_filter).all()
+            return render_template('edit_account.html', account=account, contacts=contacts)
         
         # Update the account fields
         account.company_name = company_name.strip()
