@@ -23,17 +23,25 @@
                 </div>
                 <div>
                     <span class="text-sm font-medium text-gray-600">Account:</span>
-                    <p class="text-gray-900">{{ opportunity.account.company_name if opportunity.account else 'N/A' }}</p>
+                    {% if opportunity.account %}
+                        <a href="{{ url_for('main.edit_account', account_id=opportunity.account.id) }}" 
+                           class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                            {{ opportunity.account.company_name }}
+                        </a>
+                    {% else %}
+                        <p class="text-gray-900">N/A</p>
+                    {% endif %}
                 </div>
                 <div>
                     <span class="text-sm font-medium text-gray-600">Contact:</span>
-                    <p class="text-gray-900">
-                        {% if opportunity.contact %}
+                    {% if opportunity.contact %}
+                        <a href="{{ url_for('main.edit_contact', contact_id=opportunity.contact.id) }}" 
+                           class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
                             {{ opportunity.contact.first_name }} {{ opportunity.contact.last_name }}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
+                        </a>
+                    {% else %}
+                        <p class="text-gray-900">N/A</p>
+                    {% endif %}
                 </div>
                 <div>
                     <span class="text-sm font-medium text-gray-600">Current Stage:</span>
