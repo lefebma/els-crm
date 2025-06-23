@@ -362,39 +362,76 @@ def add_opportunity():
             # Get organization filter
             org_filter = get_organization_filter(current_user)
             
-            # Get or create a default account for this organization
-            account = Account.query.filter_by(**org_filter).first()
-            if not account:
-                account = Account(
-                    company_name="Default Company",
-                    created_by=current_user.id
-                )
-                account = set_organization_data(account, current_user)
-                db.session.add(account)
-                db.session.commit()
+            # Get form data
+            name = request.form.get('name', '').strip()
+            company_id = request.form.get('company_id', '').strip()
+            contact_id = request.form.get('contact_id', '').strip()
+            sales_stage = request.form.get('sales_stage', 'Prospecting')
+            forecast = request.form.get('forecast', '').strip()
+            close_date = request.form.get('close_date', '').strip()
+            next_steps = request.form.get('next_steps', '').strip()
+            requirements = request.form.get('requirements', '').strip()
             
-            # Get or create a default contact for the account
-            contact = Contact.query.filter_by(account_id=account.id, **org_filter).first()
-            if not contact:
-                contact = Contact(
-                    first_name="Default",
-                    last_name="Contact",
-                    email="default@example.com",
-                    account_id=account.id,
-                    created_by=current_user.id
-                )
-                contact = set_organization_data(contact, current_user)
-                db.session.add(contact)
-                db.session.commit()
+            # Validate required fields
+            if not name:
+                flash('Opportunity name is required', 'error')
+                org_filter = get_organization_filter(current_user)
+                accounts = Account.query.filter_by(**org_filter).all()
+                contacts = Contact.query.filter_by(**org_filter).all()
+                return render_template('add_opportunity.html', accounts=accounts, contacts=contacts)
+            
+            if not company_id:
+                flash('Account selection is required', 'error')
+                org_filter = get_organization_filter(current_user)
+                accounts = Account.query.filter_by(**org_filter).all()
+                contacts = Contact.query.filter_by(**org_filter).all()
+                return render_template('add_opportunity.html', accounts=accounts, contacts=contacts)
+            
+            # Validate account exists and belongs to organization
+            account = Account.query.filter_by(id=company_id, **org_filter).first()
+            if not account:
+                flash('Invalid account selected', 'error')
+                org_filter = get_organization_filter(current_user)
+                accounts = Account.query.filter_by(**org_filter).all()
+                contacts = Contact.query.filter_by(**org_filter).all()
+                return render_template('add_opportunity.html', accounts=accounts, contacts=contacts)
+            
+            # Validate contact if provided
+            contact = None
+            if contact_id:
+                contact = Contact.query.filter_by(id=contact_id, **org_filter).first()
+                if not contact:
+                    flash('Invalid contact selected', 'error')
+                    org_filter = get_organization_filter(current_user)
+                    accounts = Account.query.filter_by(**org_filter).all()
+                    contacts = Contact.query.filter_by(**org_filter).all()
+                    return render_template('add_opportunity.html', accounts=accounts, contacts=contacts)
+            
+            # Parse forecast
+            try:
+                forecast_value = forecast if forecast else '0%'
+            except ValueError:
+                forecast_value = '0%'
+            
+            # Parse close date
+            close_date_value = None
+            if close_date:
+                try:
+                    from datetime import datetime
+                    close_date_value = datetime.strptime(close_date, '%Y-%m-%d').date()
+                except ValueError:
+                    close_date_value = None
             
             # Create the opportunity
             opportunity = Opportunity(
-                name=request.form['name'],
-                sales_stage=request.form.get('stage', 'prospecting'),
-                forecast=request.form.get('probability', '50'),
-                company_id=account.id,
-                contact_id=contact.id,
-                requirements=request.form.get('description'),
+                name=name,
+                sales_stage=sales_stage,
+                forecast=forecast_value,
+                close_date=close_date_value,
+                company_id=company_id,
+                contact_id=contact_id if contact_id else None,
+                next_steps=next_steps if next_steps else None,
+                requirements=requirements if requirements else None,
                 created_by=current_user.id
             )
             opportunity = set_organization_data(opportunity, current_user)
@@ -402,6 +439,7 @@ def add_opportunity():
             db.session.commit()
             flash('Opportunity added successfully!', 'success')
             return redirect(url_for('main.opportunities'))
+            
         except Exception as e:
             flash(f'Error adding opportunity: {str(e)}', 'error')
             db.session.rollback()
