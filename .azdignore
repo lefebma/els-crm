@@ -22,6 +22,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.log
+LogFiles/
 .git/
 .github/
 .vscode/
@@ -36,3 +37,4 @@ test_*.py
 *_test.py
 tests/
 .azure/
+deployments/

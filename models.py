@@ -176,6 +176,7 @@ class Opportunity(db.Model):
     name = db.Column(db.String(200), nullable=False)
     sales_stage = db.Column(db.String(50), default='Prospecting')
     forecast = db.Column(db.String(10), default='0%')
+    amount = db.Column(db.Numeric(15, 2), nullable=True)  # Expected revenue amount
     company_id = db.Column(db.String(36), db.ForeignKey('accounts.id'), nullable=False)
     contact_id = db.Column(db.String(36), db.ForeignKey('contacts.id'), nullable=False)
     next_steps = db.Column(db.Text)
@@ -196,6 +197,7 @@ class Opportunity(db.Model):
             'name': self.name,
             'salesStage': self.sales_stage,
             'forecast': self.forecast,
+            'amount': float(self.amount) if self.amount else None,
             'companyId': self.company_id,
             'contactId': self.contact_id,
             'nextSteps': self.next_steps,

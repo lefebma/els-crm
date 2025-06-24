@@ -84,7 +84,11 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                        -
+                        {% if opportunity.amount %}
+                            ${{ "{:,.2f}".format(opportunity.amount) }}
+                        {% else %}
+                            -
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
                         {{ opportunity.close_date.strftime('%Y-%m-%d') if opportunity.close_date else '-' }}

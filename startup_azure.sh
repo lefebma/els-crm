@@ -12,6 +12,11 @@ cd /home/site/wwwroot
 
 # Initialize the database
 echo "Initializing database..."
+
+# Run database migration first
+echo "Running database migrations..."
+python migrate_add_amount.py
+
 python -c "
 try:
     from app import app

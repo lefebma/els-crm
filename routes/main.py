@@ -15,12 +15,34 @@ def dashboard():
     try:
         # Get organization filter
         org_filter = get_organization_filter(current_user)
+        current_app.logger.info(f"Dashboard: org_filter = {org_filter}")
         
-        # Get counts for dashboard using organization filter
-        leads_count = Lead.query.filter_by(**org_filter, is_converted=False).count()
-        accounts_count = Account.query.filter_by(**org_filter).count()
-        contacts_count = Contact.query.filter_by(**org_filter).count()
-        opportunities_count = Opportunity.query.filter_by(**org_filter).count()
+        # Get counts for dashboard using organization filter with fallback to 0
+        try:
+            leads_count = Lead.query.filter_by(**org_filter, is_converted=False).count()
+        except Exception as e:
+            current_app.logger.warning(f"Error counting leads: {e}")
+            leads_count = 0
+            
+        try:
+            accounts_count = Account.query.filter_by(**org_filter).count()
+        except Exception as e:
+            current_app.logger.warning(f"Error counting accounts: {e}")
+            accounts_count = 0
+            
+        try:
+            contacts_count = Contact.query.filter_by(**org_filter).count()
+        except Exception as e:
+            current_app.logger.warning(f"Error counting contacts: {e}")
+            contacts_count = 0
+            
+        try:
+            opportunities_count = Opportunity.query.filter_by(**org_filter).count()
+        except Exception as e:
+            current_app.logger.warning(f"Error counting opportunities: {e}")
+            opportunities_count = 0
+        
+        current_app.logger.info(f"Dashboard counts: leads={leads_count}, accounts={accounts_count}, contacts={contacts_count}, opportunities={opportunities_count}")
         
         return render_template('dashboard.html', 
                              leads_count=leads_count,
@@ -29,8 +51,20 @@ def dashboard():
                              opportunities_count=opportunities_count)
     except Exception as e:
         current_app.logger.error(f"Dashboard error: {e}")
-        flash('Error loading dashboard. Please try logging in again.', 'error')
-        return redirect(url_for('auth.login'))
+        import traceback
+        current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
+        
+        # Try to render dashboard with zero counts as fallback
+        try:
+            return render_template('dashboard.html', 
+                                 leads_count=0,
+                                 accounts_count=0,
+                                 contacts_count=0,
+                                 opportunities_count=0)
+        except Exception as render_error:
+            current_app.logger.error(f"Dashboard template render error: {render_error}")
+            flash('Error loading dashboard. Please try logging in again.', 'error')
+            return redirect(url_for('auth.login'))
 
 @main_bp.route('/leads')
 @login_required
@@ -368,6 +402,7 @@ def add_opportunity():
             contact_id = request.form.get('contact_id', '').strip()
             sales_stage = request.form.get('sales_stage', 'Prospecting')
             forecast = request.form.get('forecast', '').strip()
+            amount = request.form.get('amount', '').strip()
             close_date = request.form.get('close_date', '').strip()
             next_steps = request.form.get('next_steps', '').strip()
             requirements = request.form.get('requirements', '').strip()
@@ -422,11 +457,22 @@ def add_opportunity():
                 except ValueError:
                     close_date_value = None
             
+            # Process amount
+            amount_value = None
+            if amount:
+                try:
+                    amount_value = float(amount)
+                    if amount_value < 0:
+                        amount_value = None
+                except ValueError:
+                    amount_value = None
+            
             # Create the opportunity
             opportunity = Opportunity(
                 name=name,
                 sales_stage=sales_stage,
                 forecast=forecast_value,
+                amount=amount_value,
                 close_date=close_date_value,
                 company_id=company_id,
                 contact_id=contact_id if contact_id else None,
@@ -473,6 +519,7 @@ def edit_opportunity(opportunity_id):
         name = request.form.get('name')
         sales_stage = request.form.get('sales_stage')
         forecast = request.form.get('forecast')
+        amount = request.form.get('amount')
         company_id = request.form.get('company_id')
         contact_id = request.form.get('contact_id')
         requirements = request.form.get('requirements')
@@ -498,10 +545,21 @@ def edit_opportunity(opportunity_id):
                 contacts = Contact.query.filter_by(**org_filter).all()
                 return render_template('edit_opportunity.html', opportunity=opportunity, accounts=accounts, contacts=contacts)
         
+        # Process amount
+        amount_value = None
+        if amount:
+            try:
+                amount_value = float(amount)
+                if amount_value < 0:
+                    amount_value = None
+            except ValueError:
+                amount_value = None
+        
         # Update the opportunity fields
         opportunity.name = name.strip()
         opportunity.sales_stage = sales_stage
         opportunity.forecast = forecast.strip() if forecast else '50%'
+        opportunity.amount = amount_value
         opportunity.company_id = company_id if company_id else opportunity.company_id
         opportunity.contact_id = contact_id if contact_id else opportunity.contact_id
         opportunity.requirements = requirements.strip() if requirements else None

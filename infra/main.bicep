@@ -21,15 +21,17 @@ param principalId string = ''
 
 // Variables
 var abbrs = loadJsonContent('./abbreviations.json')
-var resourceToken = uniqueString(subscription().id, environmentName)
-var tags = { 'azd-env-name': environmentName }
 
 // Organize resources in a resource group
 resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.resourcesResourceGroups}${environmentName}'
   location: location
-  tags: tags
+  tags: { 'azd-env-name': environmentName }
 }
+
+// Variables that depend on the resource group - using the correct format for AZD
+var resourceToken = uniqueString(subscription().id, environmentName)
+var tags = { 'azd-env-name': environmentName }
 
 // User-assigned managed identity for the app service
 module userAssignedIdentity './core/security/userassignedidentity.bicep' = {
