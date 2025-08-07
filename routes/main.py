@@ -127,19 +127,66 @@ def edit_lead(lead_id):
         phone = request.form.get('phone')
         source = request.form.get('source')
         stage = request.form.get('stage')
+        notes = request.form.get('notes')
         
         # Validate required fields
-        if not contact_person or not email or not stage:
-            flash('Please fill in all required fields (Contact Person, Email, and Stage)', 'error')
+        if not contact_person or not email or not company_name or not stage:
+            flash('Please fill in all required fields (Contact Person, Email, Company Name, and Stage)', 'error')
             return render_template('edit_lead.html', lead=lead)
         
         # Update the lead fields
         lead.contact_person = contact_person.strip()
         lead.email = email.strip()
-        lead.company_name = company_name.strip() if company_name else None
+        lead.company_name = company_name.strip()
         lead.phone = phone.strip() if phone else None
         lead.source = source.strip() if source else None
         lead.stage = stage
+        lead.notes = notes.strip() if notes else None
+        
+        db.session.commit()
+        flash('Lead updated successfully!', 'success')
+        
+    except Exception as e:
+        flash(f'Error updating lead: {str(e)}', 'error')
+        db.session.rollback()
+    
+    return redirect(url_for('main.leads'))
+
+@main_bp.route('/leads/<lead_id>/edit', methods=['POST'])
+@login_required
+def edit_lead_post(lead_id):
+    """Handle POST from the edit lead modal. Updates all lead fields."""
+    try:
+        # Find the lead using organization filter
+        org_filter = get_organization_filter(current_user)
+        lead = Lead.query.filter_by(id=lead_id, **org_filter).first()
+        
+        if not lead:
+            flash('Lead not found or access denied', 'error')
+            return redirect(url_for('main.leads'))
+        
+        # Get all form fields
+        contact_person = request.form.get('contact_person')
+        email = request.form.get('email')
+        company_name = request.form.get('company_name')
+        phone = request.form.get('phone')
+        source = request.form.get('source')
+        stage = request.form.get('stage')
+        notes = request.form.get('notes')
+        
+        # Validate required fields
+        if not contact_person or not email or not company_name or not stage:
+            flash('Please fill in all required fields (Contact Person, Email, Company Name, and Stage)', 'error')
+            return redirect(url_for('main.leads'))
+        
+        # Update the lead fields
+        lead.contact_person = contact_person.strip()
+        lead.email = email.strip()
+        lead.company_name = company_name.strip()
+        lead.phone = phone.strip() if phone else None
+        lead.source = source.strip() if source else None
+        lead.stage = stage
+        lead.notes = notes.strip() if notes else None
         
         db.session.commit()
         flash('Lead updated successfully!', 'success')

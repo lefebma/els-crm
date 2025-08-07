@@ -30,6 +30,7 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
       linuxFxVersion: '${runtimeName}|${runtimeVersion}'
       alwaysOn: false
       ftpsState: 'Disabled'
+      appCommandLine: 'bash startup_azure.sh'
       cors: {
         allowedOrigins: ['*']
         supportCredentials: false

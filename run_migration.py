@@ -1,25 +1,97 @@
 #!/usr/bin/env python3
 """
-Run database migration on Azure production database
+Simple migration script to add amount column to opportunities table
 """
 import os
-import sys
+import psycopg2
+from psycopg2 import sql
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-# Import the migration script
-from migrate_add_amount import migrate_add_amount_column
+def run_migration():
+    """Add amount column to opportunities table"""
+    try:
+        # Get database connection details from environment
+        database_url = os.getenv('DATABASE_URL')
+        if not database_url:
+            print("❌ DATABASE_URL environment variable not found")
+            return False
+            
+        # Parse the database URL
+        # Format: postgresql://username:password@host:port/database
+        if database_url.startswith('postgresql://'):
+            # Extract components
+            parts = database_url.replace('postgresql://', '').split('@')
+            if len(parts) != 2:
+                print("❌ Invalid DATABASE_URL format")
+                return False
+                
+            user_pass = parts[0]
+            host_db = parts[1]
+            
+            if ':' in user_pass:
+                username, password = user_pass.split(':', 1)
+            else:
+                username = user_pass
+                password = os.getenv('POSTGRES_PASSWORD', '')
+                
+            if '/' in host_db:
+                host_port, database = host_db.split('/', 1)
+            else:
+                host_port = host_db
+                database = 'crmdb'
+                
+            if ':' in host_port:
+                host, port = host_port.split(':')
+            else:
+                host = host_port
+                port = '5432'
+                
+            # Remove any query parameters from database name
+            if '?' in database:
+                database = database.split('?')[0]
+                
+            print(f"Connecting to: {host}:{port}/{database} as {username}")
+            
+            # Connect to the database
+            conn = psycopg2.connect(
+                host=host,
+                database=database,
+                user=username,
+                password=password,
+                port=port,
+                sslmode='require'
+            )
+            
+            cursor = conn.cursor()
+            
+            # Check if the column already exists
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'opportunities' AND column_name = 'amount';
+            """)
+            
+            if cursor.fetchone():
+                print("ℹ️  Amount column already exists in opportunities table")
+            else:
+                print("Adding amount column to opportunities table...")
+                
+                # Add the amount column
+                cursor.execute("""
+                    ALTER TABLE opportunities 
+                    ADD COLUMN amount NUMERIC(15, 2);
+                """)
+                
+                conn.commit()
+                print("✅ Successfully added amount column to opportunities table")
+            
+            cursor.close()
+            conn.close()
+            return True
+            
+    except Exception as e:
+        print(f"❌ Error adding amount column: {str(e)}")
+        return False
 
 if __name__ == "__main__":
-    print("Starting database migration on Azure...")
-    print(f"Database URL: {os.environ.get('DATABASE_URL', 'Not set')}")
-    
-    success = migrate_add_amount_column()
-    
-    if success:
-        print("✅ Migration completed successfully!")
-    else:
-        print("❌ Migration failed!")
-    
-    sys.exit(0 if success else 1)
+    success = run_migration()
+    exit(0 if success else 1)

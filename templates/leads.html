@@ -71,10 +71,18 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lead.created_date.strftime('%Y-%m-%d') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex space-x-2">
-                            <a href="{{ url_for('main.edit_lead', lead_id=lead.id) }}" 
-                               class="bg-blue-600 text-white px-3 py-2 text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <button data-lead-id="{{ lead.id }}" 
+                                    data-lead-name="{{ lead.contact_person }}"
+                                    data-lead-company="{{ lead.company_name }}"
+                                    data-lead-email="{{ lead.email }}"
+                                    data-lead-phone="{{ lead.phone or '' }}"
+                                    data-lead-source="{{ lead.source or '' }}"
+                                    data-lead-stage="{{ lead.stage }}"
+                                    data-lead-notes="{{ lead.notes or '' }}"
+                                    onclick="openEditModal(this)" 
+                                    class="bg-blue-600 text-white px-3 py-2 text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                                 Edit
-                            </a>
+                            </button>
                             {% if lead.stage == 'SQL' and not lead.is_converted %}
                             <a href="{{ url_for('main.convert_lead', lead_id=lead.id) }}" 
                                class="bg-green-600 text-white px-3 py-2 text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
@@ -110,6 +118,91 @@
     {% endif %}
 </div>
 
+<!-- Edit Lead Modal -->
+<div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Edit Lead Information</h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600" title="Close modal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <form id="editLeadForm" method="POST">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Contact Person -->
+                    <div class="md:col-span-2">
+                        <label for="contact_person" class="block text-sm font-medium text-gray-700 mb-2">Contact Person *</label>
+                        <input type="text" id="contact_person" name="contact_person" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Company Name -->
+                    <div class="md:col-span-2">
+                        <label for="company_name" class="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
+                        <input type="text" id="company_name" name="company_name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="md:col-span-2">
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <input type="email" id="email" name="email" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Phone -->
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                        <input type="tel" id="phone" name="phone"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Source -->
+                    <div>
+                        <label for="source" class="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                        <input type="text" id="source" name="source" placeholder="e.g., Website, Referral, Trade Show"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Stage -->
+                    <div>
+                        <label for="stage" class="block text-sm font-medium text-gray-700 mb-2">Lead Stage *</label>
+                        <select id="stage" name="stage" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="MQL">MQL (Marketing Qualified Lead)</option>
+                            <option value="SAL">SAL (Sales Accepted Lead)</option>
+                            <option value="SQL">SQL (Sales Qualified Lead)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="md:col-span-2">
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea id="notes" name="notes" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Additional notes about this lead..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeEditModal()" 
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        Update Lead
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -143,6 +236,39 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endfor %}
       {% endif %}
     {% endwith %}
+});
+
+// Modal functions
+function openEditModal(button) {
+    const leadId = button.getAttribute('data-lead-id');
+    const leadName = button.getAttribute('data-lead-name');
+    const leadCompany = button.getAttribute('data-lead-company');
+    const leadEmail = button.getAttribute('data-lead-email');
+    const leadPhone = button.getAttribute('data-lead-phone');
+    const leadSource = button.getAttribute('data-lead-source');
+    const currentStage = button.getAttribute('data-lead-stage');
+    const leadNotes = button.getAttribute('data-lead-notes');
+    
+    document.getElementById('contact_person').value = leadName;
+    document.getElementById('company_name').value = leadCompany;
+    document.getElementById('email').value = leadEmail;
+    document.getElementById('phone').value = leadPhone;
+    document.getElementById('source').value = leadSource;
+    document.getElementById('stage').value = currentStage;
+    document.getElementById('notes').value = leadNotes;
+    document.getElementById('editLeadForm').action = `/leads/${leadId}/edit`;
+    document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+}
+
+// Close modal when clicking outside
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
 });
 </script>
 {% endblock %}
